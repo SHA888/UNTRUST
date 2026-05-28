@@ -2,7 +2,7 @@
 
 **Codename: UNTRUST**
 **Four sketches and a synthesis. Working draft. Not designs.**
-**Version: 0.4.2** (2026-05-28)
+**Version: 0.5.0** (2026-05-28)
 
 > The codename names the load-bearing commitment: the neural component is treated as structurally untrusted by design. UNTRUST is a working identifier, not a brand — the document is publicly visible as a working draft, but the name is not intended for product, marketing, or external naming use.
 
@@ -17,6 +17,8 @@
 > **v0.4.1 changelog**: Citation/verification patch for Sketch 2 (§4 / §0.5) and Sketch 3 (§5 / §0.5), re-verified against 2024–2026 primary sources. Added references [24]–[32] (CLIP, Flamingo, IBProtector, SecurityLingua, Constitutional Classifiers + 2026 successor, Boundary Point Jailbreaking, grammar-constrained / grammar-aligned decoding) and Appendix B.1 rows + new subsection B.2.4. **No body-claim changes**: §0.5's assessments — Sketch 2 "least instantiated," Sketch 3 "second least-instantiated, no direct LLM-scale implementation" — were re-verified and _survive_; the patch supplies their evidence rather than correcting them. §0.5, §0.6, §13, and body §1–§12 preserved verbatim. Notably, §5.4's prediction (a neural verifier is attackable like the generator) is now empirically corroborated by 2026 attacks on production neural guards [30].
 
 > **v0.4.2 changelog**: Internal-consistency patch from a 2026-05-28 cross-check of numbering, headings, cross-references, and citation linkage. Four discrepancies fixed, none touching a content claim: (1) Appendix A's references-preamble date — "All references verified 2026-05-27" was true only for [1]–[15]; scoped accordingly, with [16]–[32] pointing to their own dates in B.1 / B.2.4. (2) Appendix A entries [24]–[32] relabelled "Cited in" → "Supports", since the verbatim body (§0.5 / §4 / §5) predates them and they are linked via the changelog and Appendix B, not inline brackets. (3) B.4's VLM-citation bullet now points to its v0.4.1 closure ([24][25], B.2.4). (4) Added B.2.5 logging the §0 "synthesis (§7)" cross-reference (the trusted-base insight is stated in §7; the system synthesis is §8 — §0's verbatim text is preserved, the correction is logged). Body §1–§12, §0.5, §0.6, and §13 preserved verbatim.
+
+> **v0.5.0 changelog**: Scope expansion. §14 (added) brings the three adjacent "trustworthy AI" clusters — hallucination/accuracy, alignment/honesty, robustness/OOD — into UNTRUST's remit, **reversing the scope decision §13.5 made in v0.4.0** (logged in B.2.6). The expansion is responsible, not a dissolution: §2's fix/mitigation criterion is retained and repurposed as the cross-cluster discriminator, and each newly-admitted cluster is tagged with its true enforceability class (§13.2) — all three are mitigation- or statistical-guarantee-class, and **none receives a substrate fix**, because the inevitability results [17][18] and the §13.1 precondition foreclose one. §14 carries the four-cluster comparison (failure mode / fix space / success criterion), the independence argument, and an explicit map onto §13.2's A/B/C classes. Added references [33]–[35] and Appendix B.2.6 / B.3 entries. Body §1–§13, §0.5, §0.6 preserved verbatim; the document title, §0, §10, and §13.5 are **not** rewritten — that non-additive reframe is deferred to the eventual major (v1.0.0) bump. Until then the title under-describes the remit, by design (additive-only discipline).
 
 ---
 
@@ -598,6 +600,66 @@ The contribution of this section is a sharper edge, not a wider remit.
 
 ---
 
+## 14. The wider trustworthy-AI remit (added v0.5.0)
+
+§13.5 declined to bring the adjacent "trustworthy AI" clusters into scope, on the ground that naming them was enough to locate the boundary. v0.5.0 reverses that decision: this section brings hallucination/accuracy, alignment/honesty, and robustness/OOD into UNTRUST's remit. The reversal is logged in B.2.6; §13.5's verbatim text is preserved as the v0.4.0 position.
+
+The reversal is narrower than it sounds, and the narrowness is the whole point. "In remit" here means the document **takes responsibility for mapping** each cluster — its failure mode, its fix space, its success criterion, and its enforceability class — not that it claims a substrate fix for each. Three of the four clusters are mitigation- or statistical-guarantee-class (§13.2); the honest content of bringing them in is to say so, and to keep their fix spaces in separate lanes. §2's criterion is not dissolved; it is **repurposed** from a wall around one cluster into the discriminator that runs across all four.
+
+This is the move §0 warns about, done in the one form that does not become the drift: a frame that _separates_ the clusters, not a solution that _conflates_ them. A single solution covering all four would be precisely the "trustworthy AI" conflation this document exists to resist (§14.2). A single frame that holds them apart, each with its own success criterion, is the opposite — and is what §13.2 already implies.
+
+### 14.1 Four problem clusters
+
+| Problem cluster                  | Failure mode                                          | Fix space                                                                                                                       | Success criterion                            |
+| -------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| Substrate trust (UNTRUST-style)  | Adversarial influence through input channels         | Architectural enforcement: masks (§3), bandwidth bottlenecks (§4), verifier signoff (§5), capability gating (§6), parameterisation-class restriction (§0.6) | Property holds against worst-case input      |
+| Hallucination / accuracy         | Model is wrong in the absence of any adversary       | Training-data quality, retrieval augmentation [33], verification loops, calibration training                                   | Statistical reduction of error rate          |
+| Alignment / honesty              | Model's behaviour diverges from user/principal intent | RLHF [34], constitutional AI [35], character training, interpretability                                                        | Behaviour matches stated intent              |
+| Robustness / OOD                 | Behaviour degrades outside the training distribution | Wider training, ensembles, uncertainty quantification, conformal prediction under bounded shift [23]                           | Graceful degradation rather than confident error |
+
+### 14.2 The clusters are independent
+
+The properties are orthogonal. A model can be perfectly trustworthy in the UNTRUST sense — no adversarial input can cross a trust boundary — and still hallucinate constantly. Conversely, a model can be perfectly accurate on clean inputs and catastrophically vulnerable to injection. Neither property implies the other, in either direction.
+
+The independence is structural, not incidental: the clusters have different failure modes (adversary present vs. absent; input-channel attack vs. distributional drift vs. value divergence), different fix spaces (architectural enforcement vs. data/retrieval vs. preference training vs. coverage methods), and different success criteria (worst-case guarantee vs. error-rate reduction vs. intent-match vs. graceful degradation). A mitigation for one does not address the others. This is why a single "trustworthy AI" product that claims to cover all four is conflating categories that require different engineering — the conflation §0 warns the framing drifts toward.
+
+### 14.3 Mapping to the §13.2 enforceability classes
+
+§14.1 cuts the space by problem; §13.2 cuts it by enforceability. They are two views of one line:
+
+- Substrate trust → **Class A** (structurally enforceable; meets the §2 fix bar).
+- Hallucination / accuracy → **Class C** (mitigation-only; reference-dependent on external ground truth, §13.1).
+- Alignment / honesty → **Class C** (mitigation-only; reference-dependent on a latent principal intent, §13.1).
+- Robustness / OOD → **Class B** where the shift is known and bounded (conformal coverage [23]); **Class C** in the open world (the complement of the training distribution is unbounded, §13.1).
+
+The §14 problem-space view and the §13.2 property-space view must not be read as two competing taxonomies. They are the same partition seen from two sides: only the substrate-trust cluster sits in Class A — which restates §13.5's "one cell of one row."
+
+### 14.4 Hallucination / accuracy — Class C, mitigation
+
+The failure mode needs no adversary: the model is simply wrong on a clean input. The fix space is statistical — retrieval grounding [33], verification loops, calibration training, better data — and the success criterion is a lower error rate, never zero. There is **no substrate fix**, and this is not a gap awaiting research: hallucination is inevitable by statistical [17] and computability-theoretic [18] argument, and "is this output true?" is reference-dependent on a ground truth outside the computation (§13.1), so there is no internal structure to mask or gate.
+
+What UNTRUST-style thinking _does_ buy here is narrow and already stated: §13.3's sound, symbolic verifier enforces _deductive validity_ over the formalisable fraction of a problem (a proof checker cannot be argued out of soundness). That is a Class A guarantee about a chain's validity, not about a claim's truth — and it covers only the formalisable slice. It is a real contribution, and it is small.
+
+### 14.5 Alignment / honesty — Class C, mitigation
+
+The failure mode is value divergence: the model's behaviour does not match the principal's intent, with no adversary required. The fix space is preference- and feedback-based — RLHF [34], constitutional AI [35], character training, interpretability — and the success criterion is intent-match. There is **no substrate fix**, because intent is a relation to a latent principal state _outside_ the computation (§13.1); there is no internal structure whose presence corresponds to "aligned." Worse, the model's own stated reasoning is not a reliable window onto its computation: chains of thought are frequently unfaithful [20][21], so even honesty cannot be read off the output. Honesty / non-deception and intent-alignment are the Class C members §13.2 already named.
+
+### 14.6 Robustness / OOD — Class B (bounded shift) / Class C (open world)
+
+The failure mode is degradation outside the training distribution. The fix space is coverage-oriented: wider training, ensembles, uncertainty quantification, and conformal prediction [23]. This cluster splits across the §13.2 line. Where the shift is **known and bounded**, conformal methods give a real, distribution-free coverage guarantee — Class B — but it is marginal and rests on exchangeability, the very assumption shift breaks, which is why §13.2 flags Class B as the category most often mistaken for a fix. In the **open world**, the complement of the training distribution is unbounded (§13.1), so no guarantee is available and only mitigations remain — Class C. The honest success criterion is graceful degradation, not a worst-case bound.
+
+### 14.7 What stays true
+
+The remit grew; the §2 distinction did not blur. Three commitments survive intact:
+
+1. **§2 still discriminates.** Every cluster's claim is still measured against "defeatable by within-distribution input?" — now as a cross-cluster test, not a one-cluster wall.
+2. **No Class C cluster receives a substrate fix.** Bringing a cluster into remit means classifying and mapping it honestly, including stating where only mitigations exist. A reader must not leave §14 thinking hallucination or intent-alignment is architecturally enforceable; §14.3–§14.6 say the opposite.
+3. **The lanes stay separate.** §14 is a frame that holds the clusters apart, not a solution that merges them. The independence in §14.2 is load-bearing.
+
+What does not yet match the remit: the document's **title**, §0, §10, and §13.5 still describe a substrate-trust-only document. Under the additive-only discipline those are preserved verbatim and revised only at the major (v1.0.0) bump; until then the title under-describes the document on purpose, and B.2.6 records the gap.
+
+---
+
 ## Appendix A: References (added v0.2.0)
 
 References [1]–[15] verified 2026-05-27 via web search against primary sources (arXiv, USENIX, ACM, OpenAI, Microsoft Research, conference proceedings). Later additions — [16] (v0.3.0) and [17]–[32] (v0.4.0 / v0.4.1) — were verified on their own dates (most on 2026-05-28), recorded in Appendix B.1 and B.2.4.
@@ -756,6 +818,21 @@ Park, K., Wang, J., Berg-Kirkpatrick, T., Polikarpova, N., & D'Antoni, L. (2024)
 Available: https://arxiv.org/abs/2405.21047
 Supports §0.5 / §5 for the caveat on [31]: greedy grammar masking distorts the LLM's distribution away from the true distribution over grammatical outputs; "the gate is sound" does not mean "the gated distribution is unchanged." The enforcement is real; it is not free.
 
+**[33] RAG — Retrieval-Augmented Generation (added v0.5.0)**
+Lewis, P., Perez, E., Piktus, A., Petroni, F., Karpukhin, V., Goyal, N., Küttler, H., Lewis, M., Yih, W., Rocktäschel, T., Riedel, S., & Kiela, D. (2020). _Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks._ NeurIPS 2020. arXiv:2005.11401.
+Available: https://arxiv.org/abs/2005.11401
+Supports §14.1 / §14.4 as a canonical hallucination-mitigation fix-space entry (grounding generation in retrieved documents). Mitigation class by the §2 criterion, not a substrate fix. Verification status: see B.3.
+
+**[34] InstructGPT / RLHF (added v0.5.0)**
+Ouyang, L., Wu, J., Jiang, X., Almeida, D., Wainwright, C. L., Mishkin, P., Zhang, C., Agarwal, S., Slama, K., Ray, A., et al. (2022). _Training language models to follow instructions with human feedback._ NeurIPS 2022. arXiv:2203.02155. (Foundational RLHF formulation: Christiano, P., Leike, J., Brown, T., Martic, M., Legg, S., & Amodei, D. (2017). _Deep Reinforcement Learning from Human Preferences._ NeurIPS 2017. arXiv:1706.03741.)
+Available: https://arxiv.org/abs/2203.02155
+Supports §14.1 / §14.5 as the canonical alignment fix-space entry. A training-time mitigation by the §2 criterion (cf. instruction hierarchy [7]); not a substrate fix. Verification status: see B.3.
+
+**[35] Constitutional AI (added v0.5.0)**
+Bai, Y., Kadavath, S., Kundu, S., Askell, A., Kernion, J., Jones, A., Chen, A., et al. (2022). _Constitutional AI: Harmlessness from AI Feedback._ Anthropic. arXiv:2212.08073.
+Available: https://arxiv.org/abs/2212.08073
+Supports §14.1 / §14.5 as an alignment fix-space entry (RLAIF against a written constitution). Distinct from Constitutional _Classifiers_ [28][29], which are inference-time I/O guards. Mitigation class. Verification status: see B.3.
+
 ### Foundational work on orthogonal/unitary parameterisations (relevant to §0.6)
 
 - Lezcano-Casado, M. & Martínez-Rubio, D. (2019). _Cheap orthogonal constraints in neural networks: A simple parameterization of the orthogonal and unitary group._ ICML 2019. — Cayley parameterisation as a general technique.
@@ -867,6 +944,16 @@ A 2026-05-28 cross-check of numbering, headings, cross-references, and citation 
 | Appendix A labelled [24]–[32] "Cited in §0.5 / §4 / §5", but those body sections are preserved verbatim and contain no [24]–[32] inline brackets.                 | Relabelled "Supports". A patch cannot alter verbatim body, so these refs are necessarily linked appendix-side (via the v0.4.1 changelog and B.1 / B.2.4), not by inline brackets. [17]–[23] are unaffected — they are inline-cited in §13. |
 | B.4's VLM-citation bullet still described the gap as open after B.1 declared it closed by [24][25].                                                                | B.4 bullet now points forward to its v0.4.1 closure (B.2.4).                                                                                                                                                                              |
 
+### B.2.6 Scope reversal in v0.5.0
+
+v0.5.0 reverses a scope decision recorded in v0.4.0. Per the verbatim-preservation rule, the prior text stays in place and the reversal is logged here.
+
+| Prior position                                                                                                                            | Reversed by      | Note                                                                                                                                                                                                                                                                                                                                            |
+| --------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| §13.5 (v0.4.0): "does not bring Class C problems into scope … does not claim UNTRUST is a 'trustworthy AI' document."                     | §14 (v0.5.0)     | §13.5's verbatim text is preserved as the v0.4.0 position. v0.5.0 brings hallucination/accuracy, alignment/honesty, and robustness/OOD into the document's remit — but as mapped, classified clusters, not substrate-fixed ones. The fix/mitigation distinction (§2) and the "only Class A is structurally enforceable" finding (§13.2) are unchanged; what changed is that the document now discusses the non-A clusters in their own right instead of excluding them. |
+| §10's "Semantic alignment" exclusion                                                                                                     | §14.5 (partial)  | §10 listed semantic alignment among what the document "does NOT address." §14.5 now addresses it as a Class C mitigation cluster. The remaining §10 exclusions (deceived principals, trusted-base correctness, side channels, supply chain, physical access, multi-agent dynamics, computational cost) stand.                                       |
+| Title / subtitle / §0 framing as a substrate-trust-only document                                                                          | (not yet)        | The non-additive rewrite of the title, §0, §10, and §13.5 to match the widened remit is deferred to the eventual major (v1.0.0) bump. Until then the title under-describes the document; this gap is intentional under the additive-only discipline.                                                                                              |
+
 ### B.3 Claims that remain unverified or uncertain
 
 The following claims in the document are not directly backed by a cited source, and represent reasoning or speculation by the author of the document:
@@ -888,6 +975,12 @@ The following claims in the document are not directly backed by a cited source, 
 
 10. **Author lists for [26] IBProtector and [27] SecurityLingua were not independently captured** in the 2026-05-28 pass. Title, arXiv ID, year, and the mitigation-class characterisation are confirmed from primary-source abstracts; the full author lists are not recorded here and should be completed before any external citation. The classification of both as input-preprocessing mitigations (not channel asymmetry) does not depend on authorship.
 11. **The [30] Boundary Point Jailbreaking author attribution** is recorded as Davies et al. (UK AI Security Institute + Oxford OATML) from the correspondence/affiliation line in the source; the full author list was not captured. The load-bearing claim — that BPJ defeats Constitutional Classifiers and a GPT-5 input classifier — is confirmed from the abstract/figure.
+
+#### Added in v0.5.0 (asserted, not re-verified in this pass)
+
+12. **References [33] (RAG, Lewis et al. 2020), [34] (InstructGPT / RLHF, Ouyang et al. 2022; Christiano et al. 2017), and [35] (Constitutional AI, Bai et al. 2022)** are cited in §14 as canonical fix-space entries for the adjacent clusters. They are well-established works, but their bibliographic details and specific claims were not independently re-verified in this pass. They are used only to _name_ fix spaces (retrieval grounding; preference-based training; RLAIF), all of which §14 classifies as mitigation-class — the classification does not depend on the citations being exact.
+13. **The §14 four-cluster cut itself** (substrate / hallucination / alignment / robustness, by failure-mode / fix-space / success-criterion) is an organisational frame, like the four-sketch taxonomy (B.3 #1). Its claim to be the right cut of the space is asserted, not established. The load-bearing part is its mapping onto §13.2's A/B/C classes (§14.3), which follows from the §13.1 precondition rather than from the cut.
+14. **The scope expansion in §14 is an editorial decision, not a verified finding.** It widens what the document discusses; it does not change any verified claim about what is or is not structurally enforceable. The substrate problem remains unsolved (B.5); the three newly-admitted clusters are admitted as mitigation- or statistical-guarantee-class precisely because no substrate fix for them exists.
 
 ### B.4 What the verification pass did NOT cover
 
