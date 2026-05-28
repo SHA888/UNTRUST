@@ -2,7 +2,7 @@
 
 **Codename: UNTRUST**
 **Four sketches and a synthesis. Working draft. Not designs.**
-**Version: 0.4.1** (2026-05-28)
+**Version: 0.4.2** (2026-05-28)
 
 > The codename names the load-bearing commitment: the neural component is treated as structurally untrusted by design. UNTRUST is a working identifier, not a brand — the document is publicly visible as a working draft, but the name is not intended for product, marketing, or external naming use.
 
@@ -15,6 +15,8 @@
 > **v0.4.0 changelog**: Added §13 — the precondition behind the §2 criterion (architectural enforcement requires a property intrinsic to the computation's internal structure), a three-class enforceability taxonomy (structurally enforceable / statistically guaranteeable / mitigation-only), the extension of Sketch 3 to deductive-reasoning validity (stated conditionally, with autoformalisation as the §3.4-analog seam), the semantic-seam pattern shared across Class A enforcements, and an explicit non-collapse block (§13.5). Added references [17]–[23] and Appendix B.1 / B.2.3 / B.3 entries. Body sketches §1–§12, §0.5, and §0.6 preserved verbatim. This is an additive minor bump that sharpens the enforcement boundary; it does **not** expand scope to the wider "trustworthy AI" cluster, which remains out of scope per §10 and §13.5. The categorisation locates that cluster relative to the §2 bar without absorbing it.
 
 > **v0.4.1 changelog**: Citation/verification patch for Sketch 2 (§4 / §0.5) and Sketch 3 (§5 / §0.5), re-verified against 2024–2026 primary sources. Added references [24]–[32] (CLIP, Flamingo, IBProtector, SecurityLingua, Constitutional Classifiers + 2026 successor, Boundary Point Jailbreaking, grammar-constrained / grammar-aligned decoding) and Appendix B.1 rows + new subsection B.2.4. **No body-claim changes**: §0.5's assessments — Sketch 2 "least instantiated," Sketch 3 "second least-instantiated, no direct LLM-scale implementation" — were re-verified and _survive_; the patch supplies their evidence rather than correcting them. §0.5, §0.6, §13, and body §1–§12 preserved verbatim. Notably, §5.4's prediction (a neural verifier is attackable like the generator) is now empirically corroborated by 2026 attacks on production neural guards [30].
+
+> **v0.4.2 changelog**: Internal-consistency patch from a 2026-05-28 cross-check of numbering, headings, cross-references, and citation linkage. Four discrepancies fixed, none touching a content claim: (1) Appendix A's references-preamble date — "All references verified 2026-05-27" was true only for [1]–[15]; scoped accordingly, with [16]–[32] pointing to their own dates in B.1 / B.2.4. (2) Appendix A entries [24]–[32] relabelled "Cited in" → "Supports", since the verbatim body (§0.5 / §4 / §5) predates them and they are linked via the changelog and Appendix B, not inline brackets. (3) B.4's VLM-citation bullet now points to its v0.4.1 closure ([24][25], B.2.4). (4) Added B.2.5 logging the §0 "synthesis (§7)" cross-reference (the trusted-base insight is stated in §7; the system synthesis is §8 — §0's verbatim text is preserved, the correction is logged). Body §1–§12, §0.5, §0.6, and §13 preserved verbatim.
 
 ---
 
@@ -598,7 +600,7 @@ The contribution of this section is a sharper edge, not a wider remit.
 
 ## Appendix A: References (added v0.2.0)
 
-All references verified 2026-05-27 via web search against primary sources (arXiv, USENIX, ACM, OpenAI, Microsoft Research, conference proceedings).
+References [1]–[15] verified 2026-05-27 via web search against primary sources (arXiv, USENIX, ACM, OpenAI, Microsoft Research, conference proceedings). Later additions — [16] (v0.3.0) and [17]–[32] (v0.4.0 / v0.4.1) — were verified on their own dates (most on 2026-05-28), recorded in Appendix B.1 and B.2.4.
 
 **[1] ASIDE — Architecturally Separated Instruction-Data Embeddings**
 Zverev, E., Kortukov, E., Lukasik, A., Kuleshov, K., Abdelnabi, S., Tabesh, S., Singla, A., Fritz, M., & Lampert, C. H. (2025). _ASIDE: Architectural Separation of Instructions and Data in Language Models._ arXiv:2503.10566. ICLR 2026.
@@ -712,47 +714,47 @@ Cited in §13.2 as the basis for Class B: marginal, finite-sample, distribution-
 **[24] CLIP — Learning Transferable Visual Models From Natural Language Supervision (added v0.4.1)**
 Radford, A., Kim, J. W., Hallacy, C., Ramesh, A., Goh, G., Agarwal, S., Sastry, G., Askell, A., Mishkin, P., Clark, J., Krueger, G., & Sutskever, I. (2021). ICML 2021. arXiv:2103.00020.
 Available: https://arxiv.org/abs/2103.00020
-Cited in §0.5 / §4 as a VLM precedent for the encoder-bottleneck pattern (an image encoder produces a compact embedding the language side conditions on; the image is structurally _data_, not directly attendable tokens). Mechanism precedent only, not a security primitive.
+Supports §0.5 / §4 as a VLM precedent for the encoder-bottleneck pattern (an image encoder produces a compact embedding the language side conditions on; the image is structurally _data_, not directly attendable tokens). Mechanism precedent only, not a security primitive.
 
 **[25] Flamingo — a Visual Language Model for Few-Shot Learning (added v0.4.1)**
 Alayrac, J.-B., Donahue, J., Luc, P., Miech, A., Barr, I., Hasson, Y., Lenc, K., et al. (2022). NeurIPS 2022. arXiv:2204.14198.
 Available: https://arxiv.org/abs/2204.14198
-Cited in §0.5 / §4. The Perceiver Resampler maps a variable-size grid of visual features to a _fixed, small_ set of latent tokens (e.g. 64) that condition a frozen LM via cross-attention — the concrete instantiation of Sketch 2's bandwidth-bottleneck _mechanism_, though not proposed as a security mechanism.
+Supports §0.5 / §4. The Perceiver Resampler maps a variable-size grid of visual features to a _fixed, small_ set of latent tokens (e.g. 64) that condition a frozen LM via cross-attention — the concrete instantiation of Sketch 2's bandwidth-bottleneck _mechanism_, though not proposed as a security mechanism.
 
 **[26] IBProtector — Protecting Your LLMs with Information Bottleneck (added v0.4.1)**
 _Protecting Your LLMs with Information Bottleneck_ (2024). arXiv:2404.13968.
 Available: https://arxiv.org/abs/2404.13968
-Cited in §0.5 / §4. First jailbreak defense based on the Information-Bottleneck principle (input compression that extracts and preserves only task-relevant information). Closest security-relevant instance of the _information-reduction intuition_ behind Sketch 2 — but an input-preprocessing **mitigation** (a learned, attackable compressor; no architectural channel separation), not the asymmetric-bandwidth primitive. Author list not independently captured this pass — see B.3.
+Supports §0.5 / §4. First jailbreak defense based on the Information-Bottleneck principle (input compression that extracts and preserves only task-relevant information). Closest security-relevant instance of the _information-reduction intuition_ behind Sketch 2 — but an input-preprocessing **mitigation** (a learned, attackable compressor; no architectural channel separation), not the asymmetric-bandwidth primitive. Author list not independently captured this pass — see B.3.
 
 **[27] SecurityLingua — Defense via Security-Aware Prompt Compression (added v0.4.1)**
 _SecurityLingua: Efficient Defense of LLM Jailbreak Attacks via Security-Aware Prompt Compression_ (2025). arXiv:2506.12707.
 Available: https://arxiv.org/abs/2506.12707
-Cited in §0.5 / §4. Compression-based jailbreak defense that highlights suspicious instructions during compression. Same classification as [26]: a compression _mitigation_, not channel asymmetry. Author list not independently captured this pass — see B.3.
+Supports §0.5 / §4. Compression-based jailbreak defense that highlights suspicious instructions during compression. Same classification as [26]: a compression _mitigation_, not channel asymmetry. Author list not independently captured this pass — see B.3.
 
 **[28] Constitutional Classifiers (added v0.4.1)**
 Sharma, M., et al. (2025). _Constitutional Classifiers: Defending against Universal Jailbreaks across Thousands of Hours of Red Teaming._ Anthropic. arXiv:2501.18837.
 Available: https://arxiv.org/abs/2501.18837
-Cited in §0.5 / §5. Production-grade input/output classifier safeguards trained on a natural-language constitution; reduced jailbreak success from 86% to 4.4% in the first generation. An inference-time **neural verifier operating as an I/O guard** — a §2 mitigation, not the trust-invariant signoff primitive of Sketch 3. Confirms §5.4: a neural verifier is attackable (see [30]).
+Supports §0.5 / §5. Production-grade input/output classifier safeguards trained on a natural-language constitution; reduced jailbreak success from 86% to 4.4% in the first generation. An inference-time **neural verifier operating as an I/O guard** — a §2 mitigation, not the trust-invariant signoff primitive of Sketch 3. Confirms §5.4: a neural verifier is attackable (see [30]).
 
 **[29] Constitutional Classifiers++ (added v0.4.1)**
 _Constitutional Classifiers++: Efficient Production-Grade Defenses against Universal Jailbreaks_ (2026). Anthropic. arXiv:2601.04603.
 Available: https://arxiv.org/abs/2601.04603
-Cited in §0.5 / §5. Replaces input/output-only classifiers with a single _exchange_ classifier (evaluates output in the context of its input) at ~40× lower cost than the baseline. Still a neural I/O guard (mitigation class).
+Supports §0.5 / §5. Replaces input/output-only classifiers with a single _exchange_ classifier (evaluates output in the context of its input) at ~40× lower cost than the baseline. Still a neural I/O guard (mitigation class).
 
 **[30] Boundary Point Jailbreaking (added v0.4.1)**
 Davies, X., et al. (2026). _(Boundary Point Jailbreaking, BPJ.)_ UK AI Security Institute + University of Oxford (OATML). arXiv:2602.15001.
 Available: https://arxiv.org/abs/2602.15001
-Cited in §0.5 / §5 as the empirical corroboration of §5.4: BPJ succeeds against Constitutional Classifiers [28] and GPT-5's input classifier on held-out misuse questions, demonstrating that production neural guards remain defeatable. The attackability of the neural verifier is exactly the hard problem Sketch 3 names.
+Supports §0.5 / §5 as the empirical corroboration of §5.4: BPJ succeeds against Constitutional Classifiers [28] and GPT-5's input classifier on held-out misuse questions, demonstrating that production neural guards remain defeatable. The attackability of the neural verifier is exactly the hard problem Sketch 3 names.
 
 **[31] Grammar-Constrained Decoding (added v0.4.1)**
 Geng, S., Josifoski, M., Peyrard, M., & West, R. (2023). _Grammar-Constrained Decoding for Structured NLP Tasks without Finetuning._ EMNLP 2023. arXiv:2305.13971.
 Available: https://arxiv.org/abs/2305.13971
-Cited in §0.5 / §5. Masks provably grammar-violating tokens at each decode step, guaranteeing outputs conform to a context-free grammar by construction. This is genuine §2-grade architectural enforcement — but of a **syntactic** property, not a trust invariant, and not semantic/functional correctness. The decode-time analog of the §5.4 / §13.3 split (sound verifier works for the formally-expressible fraction only).
+Supports §0.5 / §5. Masks provably grammar-violating tokens at each decode step, guaranteeing outputs conform to a context-free grammar by construction. This is genuine §2-grade architectural enforcement — but of a **syntactic** property, not a trust invariant, and not semantic/functional correctness. The decode-time analog of the §5.4 / §13.3 split (sound verifier works for the formally-expressible fraction only).
 
 **[32] Grammar-Aligned Decoding (added v0.4.1)**
 Park, K., Wang, J., Berg-Kirkpatrick, T., Polikarpova, N., & D'Antoni, L. (2024). _Grammar-Aligned Decoding._ arXiv:2405.21047.
 Available: https://arxiv.org/abs/2405.21047
-Cited in §0.5 / §5 for the caveat on [31]: greedy grammar masking distorts the LLM's distribution away from the true distribution over grammatical outputs; "the gate is sound" does not mean "the gated distribution is unchanged." The enforcement is real; it is not free.
+Supports §0.5 / §5 for the caveat on [31]: greedy grammar masking distorts the LLM's distribution away from the true distribution over grammatical outputs; "the gate is sound" does not mean "the gated distribution is unchanged." The enforcement is real; it is not free.
 
 ### Foundational work on orthogonal/unitary parameterisations (relevant to §0.6)
 
@@ -854,6 +856,17 @@ A pass on 2026-05-28 re-checked the §0.5 prior-art assessments for Sketch 2 (ch
 | The only decode-coupled verifier that meets the §2 bar in 2026 is grammar-constrained decoding [31]: sound enforcement, but of a **syntactic** property only, and it distorts the distribution [32]. This is the decode-time instance of the §5.4 / §13.3 split — sound verifier for the formally-expressible fraction, mitigation for trust/semantic properties | Verified                             |
 | Net: Sketch 3 has no trust-invariant verifier instantiation at LLM scale. The claim survives, and the surrounding evidence (neural guards defeated; sound decoding confined to syntax) strengthens the document's thesis                                                                                                                                         | Claim survives                       |
 
+### B.2.5 Internal-consistency corrections (added v0.4.2)
+
+A 2026-05-28 cross-check of numbering, headings, cross-references, and citation linkage surfaced four discrepancies, none affecting a content claim. Per the verbatim-preservation rule, the §0 item is logged here rather than edited in place; the other three are metadata/citation fixes applied in Appendix A and B.4.
+
+| Discrepancy                                                                                                                                                       | Resolution                                                                                                                                                                                                                                  |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| §0 reads "The synthesis (§7)", but the section titled "The synthesis" is §8 (§12 and B.3 #2 both point to §8).                                                    | §0's verbatim v0.1.0 text is preserved. The intended referent is §7–§8: the trusted-base _insight_ ("trust requires a trusted base") is stated in §7; the system-level _synthesis_ is §8. Read "(§7)" there as "(§7–§8)".                  |
+| Appendix A preamble read "All references verified 2026-05-27", but [16]–[32] were added in later versions with their own verification dates.                       | Preamble scoped to [1]–[15]; later additions point to B.1 / B.2.4 (most verified 2026-05-28).                                                                                                                                              |
+| Appendix A labelled [24]–[32] "Cited in §0.5 / §4 / §5", but those body sections are preserved verbatim and contain no [24]–[32] inline brackets.                 | Relabelled "Supports". A patch cannot alter verbatim body, so these refs are necessarily linked appendix-side (via the v0.4.1 changelog and B.1 / B.2.4), not by inline brackets. [17]–[23] are unaffected — they are inline-cited in §13. |
+| B.4's VLM-citation bullet still described the gap as open after B.1 declared it closed by [24][25].                                                                | B.4 bullet now points forward to its v0.4.1 closure (B.2.4).                                                                                                                                                                              |
+
 ### B.3 Claims that remain unverified or uncertain
 
 The following claims in the document are not directly backed by a cited source, and represent reasoning or speculation by the author of the document:
@@ -880,7 +893,7 @@ The following claims in the document are not directly backed by a cited source, 
 
 - Neuroscience claims (predictive coding, hierarchical Bayesian inference, System 1/System 2 analogies): not verified against primary neuroscience sources.
 - Adversarial examples timeline: assumed correct (Goodfellow et al. 2014 is canonical) but not re-verified.
-- Vision-language model architecture claims (CLIP, Flamingo, encoder bottleneck pattern): assumed correct from general knowledge; not cited.
+- Vision-language model architecture claims (CLIP, Flamingo, encoder bottleneck pattern): assumed correct from general knowledge; not cited. **(Closed in v0.4.1 — now cited as [24][25]; see B.2.4.)**
 - Claims about other architectures (Mamba, RWKV, diffusion LMs): assumed correct; not separately verified.
 - The C-to-Rust analogy and the broader paradigm-shift framing: philosophical/historical claim, not verified against secondary sources.
 - The "EchoLeak" and other specific 2025-2026 attack incidents mentioned in conversation but not in document body.
