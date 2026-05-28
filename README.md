@@ -10,7 +10,7 @@ UNTRUST is not a research program, not a proposal, not a publishable artifact. I
 
 ## Contents
 
-- `UNTRUST.md` — the document itself. Current version 0.4.1.
+- `UNTRUST.md` — the document itself. Current version 0.4.2.
 - `README.md` — this file.
 
 ## Reading order
@@ -30,7 +30,7 @@ Later passes: 7. §9–§13 — cross-disciplinary inputs, limits, open question
 
 Semantic-version-shaped, applied to a thinking document:
 
-- **Patch (0.x.y)** — clarifications, typos, citation fixes, distribution/metadata updates. No substantive content change. Example: v0.4.1 added Sketch 2 & 3 prior-art citations + verification-log entries (no body-claim change).
+- **Patch (0.x.y)** — clarifications, typos, citation fixes, distribution/metadata updates. No substantive content change. Examples: v0.4.1 added Sketch 2 & 3 prior-art citations + verification-log entries; v0.4.2 fixed cross-references, stale dates, and citation linkage (no body-claim change).
 - **Minor (0.y.0)** — additive: new sections, new references, new sketches. Existing content preserved verbatim. Examples: v0.2.0 added prior-art mapping; v0.3.0 added Pattern 5; v0.4.0 added the enforcement-boundary taxonomy (§13).
 - **Major (x.0.0)** — reserved for the point where the document commits to a position defensible in writing. Not yet.
 
@@ -48,7 +48,7 @@ All updates are surgical. Existing content is preserved verbatim across versions
 
 ## Distribution
 
-Publicly visible as a working draft (v0.4.1+). The codename UNTRUST is a working identifier, not branding — it names the load-bearing commitment (the neural component is treated as structurally untrusted by design) and is not intended for product, marketing, or external naming use. If any of the sketches becomes the basis for actual implementation work, that work gets its own scope, license, and naming — separate from this document.
+Publicly visible as a working draft (v0.4.2+). The codename UNTRUST is a working identifier, not branding — it names the load-bearing commitment (the neural component is treated as structurally untrusted by design) and is not intended for product, marketing, or external naming use. If any of the sketches becomes the basis for actual implementation work, that work gets its own scope, license, and naming — separate from this document.
 
 ## License
 

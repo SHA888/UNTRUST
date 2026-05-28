@@ -13,19 +13,19 @@ There is nothing to compile, run, or test. Operations on this repo are document 
 The document follows strict versioning rules that override default "improve as you go" instincts:
 
 - **Existing content is preserved verbatim across versions.** When revising, do not rewrite or "clean up" prior sections. If a prior claim was wrong, leave the original text and record the correction in Appendix B (Verification log).
-- **All corrections go in Appendix B**, not inline. A reader re-reading §3 should see the v0.1.0 text; the v0.2.0/v0.3.0 corrections live in B.2 / B.2.1.
+- **All corrections go in Appendix B**, not inline. A reader re-reading §3 should see the v0.1.0 text; the per-version corrections accumulate in B.2 / B.2.1 / … / B.2.5 (one subsection per version that made corrections).
 - **Additive changes only**, except for major version bumps. New sections (e.g., §0.5 in v0.2.0, §0.6 in v0.3.0) are inserted with a clear "(added vX.Y.Z)" marker. Existing section numbers do not shift.
 - **Inline citations use [N] referencing Appendix A.** When adding a new reference, append to Appendix A and update the verification log in B.1 with the verification status.
 
 ### Versioning semantics
 
-- **Patch (0.x.y)** — typos, citation URL fixes, formatting. No content claims change.
-- **Minor (0.y.0)** — new sections, new references, new sketches. Body content preserved verbatim. Examples: v0.2.0 added §0.5 + Appendix A/B; v0.3.0 added §0.6 + reference [16].
+- **Patch (0.x.y)** — typos, citation URL fixes, formatting, metadata, cross-reference/citation-linkage corrections. No content claims change. Examples: v0.3.1 (distribution metadata); v0.4.1 (prior-art citations [24]–[32] added via the appendix, body verbatim); v0.4.2 (cross-reference, stale-date, and citation-linkage fixes).
+- **Minor (0.y.0)** — new sections, new references, new sketches. Body content preserved verbatim. Examples: v0.2.0 added §0.5 + Appendix A/B; v0.3.0 added §0.6 + reference [16]; v0.4.0 added §13 + references [17]–[23].
 - **Major (x.0.0)** — reserved for the point where the document commits to a defensible position. Not yet reached.
 
 Bump the version in the document header AND record the change in the changelog block immediately under the title. Do not silently edit.
 
-## Substance (so you don't have to re-read 55 KB)
+## Substance (so you don't have to re-read ~100 KB)
 
 The document organizes LLM trust enforcement into **five architectural patterns**:
 
@@ -38,6 +38,8 @@ The document organizes LLM trust enforcement into **five architectural patterns*
 The **synthesis (§7–§8)** is the load-bearing claim: trust requires a trusted base outside the neural network. The substrate fix is a "small trusted base + large untrusted neural component" architecture, drawing on capability-based OS security (Dennis & Van Horn 1966; KeyKOS; seL4).
 
 The **criterion in §2** separates substrate fixes from mitigations: can the protection be defeated by sufficiently clever input within the training distribution? If yes → mitigation. If no → substrate fix.
+
+**§13 (the enforcement boundary, added v0.4.0)** sharpens §2 without widening scope. It states the precondition behind the criterion — a property is architecturally enforceable only if it is intrinsic to the computation's internal structure, not defined by a relation to something outside the computation — and adds a three-class enforceability taxonomy: **A. structurally enforceable** (meets the §2 fix bar; trust-boundary info-flow lives here), **B. statistically guaranteeable** (e.g. conformal coverage under exchangeability — the class most likely to be mistaken for a fix, and is not one), **C. mitigation-only** (factual truth, honesty, intent-alignment, open-world OOD). §13.3 extends Sketch 3 to deductive-reasoning validity, conditional on autoformalisation (the §3.4-analog seam). §13.5 is an explicit non-collapse block: naming the wider "trustworthy AI" cluster here locates it relative to the §2 bar but does **not** bring it into scope.
 
 ## Editorial guardrails
 
