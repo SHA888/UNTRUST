@@ -1,6 +1,6 @@
 # UNTRUST
 
-LLM trust sorted by what can actually be enforced: substrate fixes (Part I) vs. non-substrate fixes (Part II). Working draft, publicly visible.
+**LLM Trust by Enforceability** sorted by what can actually be enforced: _substrate fixes_ (Part I) vs. _non-substrate fixes_ (Part II). Working draft, publicly visible.
 
 ## What this is
 
