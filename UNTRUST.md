@@ -2,114 +2,87 @@
 
 **Codename: UNTRUST**
 **Substrate fixes vs. non-substrate fixes, sorted by what can actually be enforced. Working draft.**
-**Version: 1.0.2** (2026-05-28)
+**Version: 2.0.1** (2026-05-28)
 
 > The codename names the load-bearing commitment: the neural component is treated as structurally untrusted by design. UNTRUST is a working identifier, not a brand — the document is publicly visible as a working draft, but the name is not intended for product, marketing, or external naming use.
 
-> **Changelog**: the full version history lives in [CHANGELOG.md](CHANGELOG.md) (split out of this header at v1.0.1).
+> **Changelog**: what each version added, changed, or replaced is recorded in [CHANGELOG.md](CHANGELOG.md); earlier full text is recoverable from git history. Nothing here is rewritten silently.
 
 ---
 
 ## 0. Epistemic status
 
-- This document sorts LLM trust problems by **what can be enforced**, into two categories. **Part I — Substrate fix** is the original UNTRUST argument: the narrow class of trust properties an architecture can enforce so that no within-distribution input can defeat them. **Part II — Non-substrate fix** is the wider "trustworthy AI" remit — hallucination, alignment, robustness/OOD — where only mitigations or statistical guarantees exist. The §12 bridge (the enforcement boundary) is what separates the two.
-- The Part I material is **sketches**, not architectures. They are first-pass structural ideas, not implementations or even specifications.
-- **No current approach is a complete substrate fix at LLM scale.** Several of the sketches have working partial implementations (e.g. ASIDE, StruQ, CaMeL — see §3) that achieve real-but-incomplete robustness gains without meeting the §2 criterion fully. (The original v0.1.0 framing — "nobody has built any of them" — was substantively wrong; §3 carries the honest repositioning.)
-- Each sketch has **at least one unsolved hard problem**. None is complete.
-- The synthesis (§9–§10) is **more speculative** than the individual sketches. Treat it as a hypothesis about where the answer might live, not a claim to have found it.
-- Part II being **in scope does not make it substrate-fixable**. Bringing those clusters into the document maps and classifies them honestly; it does not claim an architectural fix for any of them. The §2 criterion still sorts the two categories — it was not softened to admit Part II.
-- This document is a **starting point for thinking**, not a finished argument. The expected mode of use is to interrogate each piece, find what breaks, and either repair it or replace it.
-- The conversation that produced this drifted toward comfortable mitigation framings multiple times before settling on the substrate framing. The drift is real and worth resisting on re-reading. If a section feels like it lets the substrate question off the hook, it probably does — and if Part II ever starts to read as though its mitigations were substrate fixes, that is the same drift wearing new clothes.
+This note sorts LLM trust problems by **what can be enforced**, and splits in two. **Part I — Substrate fix** is the original UNTRUST argument: the narrow class of trust properties an architecture can enforce so that no within-distribution input can defeat them. **Part II — Non-substrate fix** covers the wider "trustworthy AI" problems — hallucination, alignment, robustness — where only mitigations or statistical guarantees exist. The bridge between them (§12) is the line that decides which is which.
+
+A few things to keep in front of mind:
+
+- The Part I designs are **sketches**, not architectures — first-pass structural ideas, not implementations or specifications.
+- **No current approach is a complete substrate fix at LLM scale.** Several of the sketches have working partial implementations (ASIDE, StruQ, CaMeL) that improve robustness without meeting the §2 criterion fully. The early framing that "nobody has built any of this" was wrong; the accurate claim is narrower.
+- Each sketch has at least one unsolved hard problem. None is complete.
+- The synthesis (§10) is more speculative than the individual sketches — a hypothesis about where the answer lives, not a claim to have found it.
+- Part II being in scope does **not** make it substrate-fixable. The note maps and classifies those problems honestly; it does not claim an architectural fix for any of them.
+- This is a **starting point for thinking**, not a finished argument. Interrogate each piece, find what breaks, and repair or replace it.
+- A standing caution: the thinking that produced this kept drifting toward comfortable mitigation framings before settling on the substrate one. If a section reads as though a mitigation were a substrate fix, that is the drift — distrust it.
 
 ---
 
 # Part I — Substrate fix
 
-## 1. The substrate problem (stated precisely)
+## 1. The substrate problem
 
-A transformer-based LLM is a function `f(context) → probability_distribution_over_next_tokens`.
+A transformer-based LLM is a function from a context to a probability distribution over the next token. The context is a single flat sequence of tokens with **no type system**. The string `"ignore previous instructions"` has identical representational status to `"the patient's MAP is 65"` — both are embeddings attended to by the same heads with the same weights.
 
-The context is a single flat sequence of tokens. There is no type system on those tokens. The string `"ignore previous instructions"` has identical representational status to the string `"the patient's MAP is 65"`. Both are embeddings being attended to by the same attention heads with the same weights.
-
-The model learns _statistically_ that certain patterns (system-prompt formatting, special tokens, instruction-following training) should bias output toward certain behaviors. But those biases are **learned correlations, not enforced invariants**.
-
-Concretely, the substrate has none of the following:
+The model learns *statistically* that certain patterns — system-prompt formatting, special tokens, instruction-following training — should bias output toward certain behaviours. But those biases are **learned correlations, not enforced invariants**. The substrate has none of the structural protections a traditional OS takes for granted:
 
 | Property                   | Traditional OS              | LLM                              |
 | -------------------------- | --------------------------- | -------------------------------- |
 | Privilege separation       | Hardware (ring 0/3, MMU)    | None — learned bias only         |
-| Address space isolation    | Page tables enforce         | No analog                        |
+| Address-space isolation    | Page tables enforce         | No analog                        |
 | Capability tokens          | Unforgeable (kernel-issued) | Forgeable (any text can imitate) |
 | Trusted/untrusted boundary | Syscall interface           | Conventions in prompt            |
-| Bypass cost                | Find kernel vuln (rare)     | Write persuasive prose (cheap)   |
+| Bypass cost                | Find a kernel vuln (rare)   | Write persuasive prose (cheap)   |
 
 **The failure mode**: any sufficiently persuasive pattern in any region of context can influence generation in any other region, because attention is unrestricted and trust is learned rather than enforced.
 
-This is true for transformers, state-space models (Mamba), recurrent architectures (RWKV), diffusion LMs, and any other current paradigm that processes natural language end-to-end through flat token sequences with shared representations. The problem is paradigm-deep, not transformer-specific. (The empirical foundation for this claim — that current LLMs systematically fail at instruction-data separation — is established by Zverev et al. [4]; the threat model and attack taxonomy are formalized by Greshake et al. [13].)
+This is paradigm-deep, not transformer-specific — it holds for state-space models (Mamba), recurrent architectures (RWKV), diffusion LMs, and any paradigm that processes language end-to-end through flat token sequences with shared representations. The empirical foundation — that current LLMs systematically fail at instruction–data separation — is Zverev et al. [4]; the threat model and attack taxonomy are Greshake et al. [13].
 
 ---
 
-## 2. What "substrate fix" requires
+## 2. What a substrate fix requires
 
-A substrate fix must break at least one of the following properties at the **architectural level** — not as a training objective the model is taught to respect, but as a computation the model cannot circumvent because the circumvention is **not representable**.
+A substrate fix must break at least one of the following at the **architectural level** — not as a training objective the model is taught to respect, but as a computation it cannot circumvent because the circumvention is **not representable**:
 
-1. **Tokens have no enforced type.** Fix: make type a structural property of position, not a learned correlation.
-2. **Attention flows freely between any tokens.** Fix: make some attention paths zero by construction, not by learned weights.
-3. **Trust is learned, not enforced.** Fix: route trust decisions through a component that the neural network cannot influence by its outputs.
-4. **Generation can produce any action.** Fix: gate generation pathways on unforgeable preconditions (cryptographic capabilities, verifier signoff, etc.).
+1. **Tokens have no enforced type.** → Make type a structural property of position, not a learned correlation.
+2. **Attention flows freely between any tokens.** → Make some attention paths zero by construction, not by learned weights.
+3. **Trust is learned, not enforced.** → Route trust decisions through a component the network cannot influence by its outputs.
+4. **Generation can produce any action.** → Gate generation on unforgeable preconditions (cryptographic capabilities, verifier signoff).
 
-The criterion that separates a substrate fix from a mitigation is: **can the protection be defeated by sufficiently clever input within the model's training distribution?** If yes, it's a mitigation. If no — because the protection is not representable as a learnable behavior the model can be persuaded out of — it's a substrate fix.
+The criterion that separates a fix from a mitigation: **can the protection be defeated by sufficiently clever input within the model's training distribution?** If yes, it is a mitigation. If no — because the protection is not a learnable behaviour the model can be persuaded out of — it is a substrate fix.
 
-By this criterion:
+By this test, the following are **mitigations**, not fixes: training-based defences (RLHF, constitutional AI, refusal training, instruction hierarchies as trained behaviour [7]); prompt-level defences (better system prompts, spotlighting [12], datamarking); classifier-based guards (the classifier is itself attackable); orchestration-layer defences (capability scoping, structured I/O, audit logs — these reduce blast radius, not influence). ASIDE [1], StruQ [3], and instruction hierarchies [7] *as trained behaviours* improve robustness statistically; they do not enforce.
 
-- **Training-based defenses** (RLHF, constitutional AI, refusal training, instruction hierarchies as trained behavior [7]): mitigations, not fixes.
-- **Prompt-level defenses** (better system prompts, spotlighting [12], datamarking): mitigations.
-- **Classifier-based guards** (input/output filters): mitigations (the classifier is itself attackable).
-- **Orchestration-layer defenses** (capability scoping, structured I/O, audit logs): blast-radius reduction, not influence prevention.
-- **ASIDE [1] / StruQ [3] / instruction hierarchies [7] as trained behaviors**: mitigations. They improve robustness statistically. They do not enforce.
-
-This is not a dismissal of mitigations. Mitigations are useful. They reduce probability and blast radius. They are necessary for current deployment. They are not the same thing as a substrate fix, and conflating the two has been the field's default failure mode.
+This is not a dismissal. Mitigations are useful, reduce probability and blast radius, and are necessary for current deployment. They are simply not substrate fixes — and conflating the two has been the field's default failure mode.
 
 ---
 
-## 3. Prior art and precedent (added v0.2.0)
+## 3. Prior art
 
-The sketches in this document are not novel directions. They are restated, structured versions of work already in progress across academic and industrial labs. A 2026-05 verification pass identified the following correspondences:
+The sketches are not novel directions. They are restated, structured versions of work already in progress:
 
-- **Sketch 1 (typed attention masks / embedding-level separation)** is most closely instantiated by **ASIDE** [1], which applies an orthogonal rotation to data-token embeddings to architecturally separate instruction and data representations. **ISE** [2] (concurrent work) uses role-specific offset vectors. **StruQ** [3] implements a secure front-end plus a fine-tuned model that follows instructions only within designated prompt regions. The foundational measurement work — establishing that current LLMs _cannot_ reliably separate instructions from data — is **Zverev et al. (ICLR 2025)** [4].
+- **Sketch 1 (typed attention masks / embedding separation)** is most closely instantiated by **ASIDE** [1], which applies an orthogonal rotation to data-token embeddings to separate instruction and data representations. **ISE** [2] uses role-specific offset vectors; **StruQ** [3] pairs a secure front-end with a fine-tuned model that follows instructions only in designated regions. The foundational measurement — that current LLMs *cannot* reliably separate instructions from data — is **Zverev et al.** [4].
+- **Sketch 2 (channel asymmetry / bandwidth bottleneck)** has mechanism precedent in vision-language models (CLIP [24], Flamingo [25]) and an information-reduction echo in jailbreak defences (IBProtector [26], SecurityLingua [27]), but the latter are input-preprocessing mitigations, not an architectural channel split. This is the least instantiated sketch as a security primitive.
+- **Sketch 3 (verifier as architectural primitive)** has no trust-invariant implementation at LLM scale. Production neural guards (Constitutional Classifiers [28][29]) are inference-time mitigations, and they are defeated by attacks like Boundary Point Jailbreaking [30] — exactly the weakness Sketch 3 names. The only decode-coupled verifier that meets the bar is grammar-constrained decoding [31][32] — sound, but for a *syntactic* property only.
+- **Sketch 4 (capability tokens)** is closely instantiated by **CaMeL** [5] (Google DeepMind + ETH Zurich), a custom interpreter that tracks capability metadata on values in LLM agent systems (solves 77% of AgentDojo tasks with provable security, vs. 84% undefended). CaMeL builds on Willison's **Dual LLM pattern** [6]; OpenAI's **Instruction Hierarchy** [7] is a training-time approximation.
+- **The trusted-base synthesis (§10)** is capability-based OS security applied to LLMs — a 60-year lineage: Dennis & Van Horn [8] (capabilities, C-lists), KeyKOS [9] (commercial, since 1983), EROS [10] (persistent capabilities), seL4 [11] (machine-checked verification of an 8,700-LOC microkernel).
+- The **threat model** is well established: Greshake et al. [13] (indirect prompt injection), OWASP LLM Top 10 [14] (LLM01 = prompt injection), MITRE ATLAS [15]. Microsoft's Spotlighting [12] is a production mitigation.
 
-- **Sketch 2 (channel asymmetry / bandwidth bottleneck)** has partial precedent in vision-language model architectures (CLIP, Flamingo, etc.) but no major LLM-specific paper proposes the full asymmetric-bandwidth approach as a security primitive. This sketch is the least instantiated of the four.
-
-- **Sketch 3 (verifier as architectural primitive)** has no direct LLM-scale implementation. The conceptual frame is adjacent to constitutional AI and scalable oversight research, but those are training-time interventions, not architectural ones. This is the second least-instantiated sketch.
-
-- **Sketch 4 (capability tokens as architectural primitive)** is closely instantiated by **CaMeL** [5] (Google DeepMind + ETH Zurich, 2025). CaMeL builds a custom Python interpreter that tracks capability metadata on values flowing through LLM agent systems, achieving ~67% mitigation on the AgentDojo benchmark. CaMeL explicitly builds on **Simon Willison's Dual LLM pattern** [6] (April 2023) and applies traditional capability-based security thinking to LLM agents. **OpenAI's Instruction Hierarchy** [7] (Wallace et al., 2024) is a training-time approximation of the same idea using prioritized roles (system > developer > user > tool output).
-
-- **§9 trusted-base synthesis** is essentially the application of **capability-based OS security** to LLM systems. The intellectual lineage is well-established: **Dennis & Van Horn (1966)** [8] introduced capabilities and C-lists. **KeyKOS** [9] (in production since 1983) demonstrated capability-based commercial operating systems. **EROS** [10] (Shapiro, 1999) extended this with persistent capabilities. **seL4** [11] (Klein et al., 2009) provided formal machine-checked verification of a 8,700-LOC capability-based microkernel. The synthesis in this document is not a new framework — it is a re-articulation of 60 years of systems-security thinking applied to a new substrate.
-
-- **Microsoft's Spotlighting** [12] (Hines et al., 2024) provides datamarking and encoding techniques for marking untrusted content. These are mitigations rather than substrate fixes (per the criterion in §2), but they're production-deployed and form part of Microsoft's defense-in-depth strategy.
-
-- The **threat model** is well-established. The canonical paper on indirect prompt injection is **Greshake et al. (2023)** [13]. The current standard taxonomy is **OWASP LLM Top 10 (2025)** [14] with LLM01 = Prompt Injection. The adversarial framework is **MITRE ATLAS** [15] (AML.T0051.000 direct, AML.T0051.001 indirect).
-
-### Honest repositioning
-
-UNTRUST is not a research program proposing new directions. It is a frame that:
-
-1. Organizes existing prior art into a clean taxonomy (four sketches + synthesis).
-2. Identifies what each existing approach does and does not solve.
-3. Names the substrate problem cleanly enough that mitigations cannot be mistaken for fixes.
-4. Connects LLM trust research to its actual intellectual lineage in capability-based OS security.
-
-Its contribution is clarity, not invention. The architectures it sketches are being built; the value of writing it down is having a shared frame to evaluate which approaches address the substrate problem and which are mitigations.
-
-The v0.1.0 framing — that this was speculative work nobody had built — was substantively wrong. Several of the sketches have working implementations achieving partial-but-real robustness improvements. The substrate problem remains unsolved, but the field is not idle on it. The honest claim is narrower: **no current approach achieves the architectural enforcement criterion in §2 fully**; all are partial fixes that improve probability and blast radius without eliminating the failure class.
+The honest repositioning: UNTRUST's contribution is **clarity, not invention**. The architectures it sketches are being built; the value is a shared frame for telling substrate fixes apart from mitigations. No current approach meets the §2 criterion fully — all are partial fixes that improve probability and blast radius without eliminating the failure class.
 
 ---
 
-## 4. Sketch 1: Typed tokens with enforced attention masks
+## 4. Sketch 1 — Typed tokens with enforced attention masks
 
-### 4.1 Mechanism
-
-Tokens carry a **type tag** as a structural property of position, not as a token in the sequence:
+**Mechanism.** Tokens carry a **type tag** as a structural property of position, not as a token in the sequence:
 
 ```
 TYPES = {
@@ -122,60 +95,30 @@ TYPES = {
 }
 ```
 
-The attention mechanism is modified so that attention weights between certain type pairs are **masked to zero by construction**:
+Attention weights between certain type pairs are **masked to zero by construction**:
 
 ```
 mask[i, j] = 0  if type(j) ∈ UNTRUSTED and target(i) ∈ {TOOL_CALL, SYSTEM}
 mask[i, j] = 0  if type(j) = DOCUMENT and target(i) = MODEL_INTERNAL[decision_layer]
-// (the model can summarize a document, but document tokens cannot directly
-//  influence the layers that decide whether to call a tool)
 ```
 
-The masking is **architectural**, not learned. The matrix multiplication has structural zeros where those connections would be. No amount of persuasive prose in a tool output can change that, because the zeros are not weights — they are absences of computation.
+The mask is **architectural, not learned** — the matrix multiplication has structural zeros where those connections would be. No amount of persuasive prose in a tool output can change that, because the zeros are absences of computation, not weights.
 
-### 4.2 Privilege ordering
+**Privilege ordering** runs `SYSTEM > USER > MODEL_INTERNAL > TOOL_OUTPUT ≈ DOCUMENT`. Higher-privilege tokens may attend down; lower-privilege information reaches higher computation only through bottlenecked pathways (Sketch 2).
 
-`SYSTEM > USER > MODEL_INTERNAL > TOOL_OUTPUT ≈ DOCUMENT`
+**Cost.** Loss of expressiveness — a tool output that legitimately *should* update a decision is bottlenecked the same as an adversarial one. Inter-channel bandwidth becomes a capability-vs-safety design parameter with no free setting, and training must accommodate the constraints.
 
-Higher-privilege tokens can attend to lower; lower cannot directly attend up. Information from lower-privilege channels can reach higher-privilege computation only through **bottlenecked pathways** designed for that purpose (see Sketch 2).
+**Hard problem — the labeling boundary.** Type tags must be assigned somewhere. If a model labels tokens, the labeler is injectable and the problem recurses; if syntactic markers determine types, input can fake the markers. The mask is enforceable *given correct labeling*, but it does not solve labeling — that must happen in a component outside the network (the orchestrator, a parser, the trusted base of §10).
 
-### 4.3 Cost
+**What it gets right.** Once labeled, the boundary cannot be defeated by clever prose; the protection is a computational impossibility, not a trained behaviour; it composes with mitigations over a smaller surface. ASIDE [1] is the closest instantiation (embedding-level separation, no added parameters), but it still allows attention between rotated and unrotated regions — the full architectural mask is unimplemented at LLM scale.
 
-- Loss of expressiveness. A tool output that genuinely should update the model's decision-making (legitimate context update) gets bottlenecked the same as an adversarial one.
-- Bandwidth between channels becomes a design parameter that trades off capability against safety. There is no free version of this trade-off.
-- Training becomes more complex: the model must learn to operate effectively given the structural constraints.
-
-### 4.4 Hard problem
-
-**The labeling boundary.** Type tags must be assigned somewhere. If a model labels the tokens, the labeler is injectable and the problem recurses. If syntactic markers in input determine types, the input can fake the markers. The type system is only as strong as the boundary that assigns types.
-
-This sketch makes the boundary **explicit and enforceable given correct labeling**. It does **not** solve labeling. Labeling has to happen in a component outside the neural network — the orchestrator, parser, or some trusted base (§9).
-
-### 4.5 What it gets right
-
-- The boundary, once labeled, cannot be defeated by clever prose.
-- The protection is not a trained behavior; it is a computational impossibility within the architecture.
-- Composes with mitigations: orchestration-layer defenses still apply, but with a smaller surface to defend.
-
-**Existing instantiations**: ASIDE [1] implements a related approach — applying an orthogonal rotation to data-token embeddings to create architecturally distinct representations of instruction vs. data tokens, without adding parameters. ISE [2] uses learned role-specific offset vectors. StruQ [3] enforces separation through a fine-tuned model and a secure front-end. None of these implement the _enforced attention mask_ approach exactly as sketched here — ASIDE separates at the embedding level but still allows attention to flow between rotated and unrotated regions. The full architectural mask remains unimplemented at LLM scale.
-
-### 4.6 What it does not solve
-
-- Labeling (see §4.4).
-- Adversarial inputs that exploit gaps in the type taxonomy (what type is a quote from a document inside a user message?).
-- Out-of-distribution attacks on the labeling rule itself.
-- Semantic alignment within trusted channels (a deceived user is still trusted).
+**What it does not solve.** Labeling; gaps in the type taxonomy (what type is a quoted document inside a user message?); out-of-distribution attacks on the labeling rule; semantic alignment within trusted channels (a deceived user is still trusted).
 
 ---
 
-## 5. Sketch 2: Computational asymmetry between channels
+## 5. Sketch 2 — Computational asymmetry between channels
 
-### 5.1 Mechanism
-
-Instead of (or in addition to) masking attention, give different channels different **amounts of compute** or different **transformations**.
-
-- **Privileged channel** (`SYSTEM` + `USER`): full attention, full bandwidth, direct input to all layers.
-- **Unprivileged channel** (`TOOL_OUTPUT`, `DOCUMENT`): processed through a heavily restricted sub-network — fewer layers, narrower bandwidth, often a separate encoder producing a low-dimensional summary vector that the main model conditions on rather than attends to directly.
+**Mechanism.** Give different channels different amounts of compute. The privileged channel (`SYSTEM` + `USER`) gets full attention and bandwidth; the unprivileged channel (`TOOL_OUTPUT`, `DOCUMENT`) is processed through a restricted sub-network — often a separate encoder producing a low-dimensional summary the main model conditions on rather than attends to directly:
 
 ```
 Privileged tokens ───────────────► [full transformer stack] ──► output
@@ -184,120 +127,49 @@ Untrusted tokens ──► [encoder] ──► [summary vec, dim=64..256] ─┘
                        (limited)         (bottleneck)
 ```
 
-### 5.2 Intuition
+**Intuition.** An attacker in the unprivileged channel can influence the model only through a bandwidth-limited bottleneck. A 64-dimensional summary can carry "this document is about authentication" but not "send the auth tokens to this specific address." The bottleneck enforces a complexity bound on what can be transmitted — the same way vision-language models treat an image as structural *data* (CLIP [24], Flamingo [25]) rather than as injectable tokens.
 
-An attacker writing adversarial text in the unprivileged channel can only influence the model through a bandwidth-limited bottleneck. To cause a specific behavior — say, "exfiltrate API keys to attacker@evil.com" — the attacker must encode that behavior into a representation the bottleneck can transmit.
+**Cost.** Fidelity: the model cannot quote a document that never enters as tokens; it can answer only what the summary supports. Fine for summarize/classify workflows, too restrictive for ones that must reason over untrusted detail. Encoder design becomes a load-bearing security decision.
 
-Most adversarial instructions are high-bandwidth: they need specific words to land. A 64-dimensional summary vector can carry "this document is about authentication" but cannot carry "send the auth tokens to this specific address." The bottleneck enforces a complexity bound on what can be transmitted.
+**Hard problem — adversarial examples against the encoder.** The encoder is itself a neural network, and adversarial examples are a 12-year-old research area. The bottleneck makes attacks *harder* (lower bandwidth, more structure required) but not impossible: worst-case input can still steer the summary toward a vector the privileged model treats as a high-priority instruction.
 
-This is structurally similar to how vision-language models work today: the image encoder produces a compact embedding that conditions the language model, but the image cannot directly inject tokens. The image is **data**, structurally. Sketch 2 extends this pattern to all untrusted input.
+**What it gets right.** Shrinks the channel through which untrusted content reaches privileged decisions; makes attack cost explicit and tunable; composes with multimodal architectures already in use.
 
-### 5.3 Cost
-
-- **Fidelity**. The model cannot quote from a document if the document never enters as tokens. It can only answer questions the encoder's summary supports.
-- For agent workflows that need to reason carefully about untrusted text, this is too restrictive.
-- For workflows that summarize or classify untrusted text without acting on its details, it is potentially adequate.
-- Encoder design becomes a load-bearing security decision.
-
-### 5.4 Hard problem
-
-**Adversarial examples against encoders.** The encoder is itself a neural network. Adversarial examples against vision models are a 12-year-old research area. The same techniques apply: an attacker can craft inputs designed to produce specific summary vectors that the privileged model interprets in attacker-chosen ways.
-
-The bottleneck makes attacks **harder** (lower bandwidth, more structure required) but not impossible. Worst-case adversarial input can still steer the summary toward a vector the privileged model treats as a high-priority instruction.
-
-### 5.5 What it gets right
-
-- Reduces the channel through which untrusted content can influence privileged decisions.
-- Makes attack cost explicit and tunable (bottleneck width is a knob).
-- Composes naturally with multi-modal architectures already in use.
-
-### 5.6 What it does not solve
-
-- Adversarial encoder examples (see §5.4).
-- Workflows requiring high-fidelity processing of untrusted text.
-- The labeling problem from Sketch 1 still applies — what counts as "untrusted" must be decided somewhere.
+**What it does not solve.** Adversarial encoder examples; high-fidelity processing of untrusted text; and the labeling problem from Sketch 1 still applies — "untrusted" has to be decided somewhere.
 
 ---
 
-## 6. Sketch 3: Verifier as a first-class architectural component
+## 6. Sketch 3 — Verifier as a first-class component
 
-### 6.1 Mechanism
-
-The model is not one network producing tokens autoregressively. It is **two networks coupled at every step**:
-
-- **Generator**: proposes the next token given context.
-- **Verifier**: assesses whether the proposed token is consistent with the system's invariants (trust invariants, safety invariants, factual invariants where checkable) given the full provenance graph of the context.
-
-A token is emitted only if the verifier signs off. The verifier has access to information the generator does not:
-
-- Provenance of every context token.
-- Trust level of every claim.
-- Formal specification of allowed actions.
-- Invariants the output must preserve.
-
-### 6.2 Asymmetry between generator and verifier
+**Mechanism.** The model is two networks coupled at every step. A **generator** proposes the next token; a **verifier** assesses whether it is consistent with the system's invariants given the full provenance of the context. A token is emitted only if the verifier signs off. The verifier sees what the generator does not: provenance of every token, trust level of every claim, a formal specification of allowed actions, and the invariants the output must preserve.
 
 |                | Generator              | Verifier                     |
 | -------------- | ---------------------- | ---------------------------- |
 | Job            | Produce tokens         | Approve/reject tokens        |
 | Size           | Large                  | Small                        |
 | Training       | Standard LM objective  | Verification objective only  |
-| Auditability   | Low                    | High (smaller, more focused) |
+| Auditability   | Low                    | High (smaller, focused)      |
 | Attack surface | Wide (all of language) | Narrow (specific invariants) |
 
-The verifier is **smaller and more interpretable** than the generator because verification is a simpler task than generation. Checking whether a proposed action is consistent with a policy is easier than proposing the action in the first place.
+The verifier is smaller and more interpretable because verification is simpler than generation — checking that an action is consistent with a policy is easier than proposing it. The pattern mirrors System 2 checking System 1, retirement logic checking speculative execution, and cheap signature verification against expensive signing.
 
-This mirrors:
+**Cost.** Latency (every token or action requires a verifier pass); coverage (only invariants expressible in the verifier's model can be checked — "this output is appropriate" is not cleanly formalizable); composition (generator and verifier must share a representation of context, provenance, and invariants).
 
-- **Human cognition**: System 2 checking System 1's outputs.
-- **Modern processors**: speculative execution checked by retirement logic.
-- **Cryptography**: signing is hard, verification is easy.
+**Hard problem — the verifier must be uncircumventable.** A *neural* verifier is attackable by the same means as the generator; a *symbolic* verifier can only check what its formal language expresses. The sketch displaces "make the generator trustworthy" to "make the verifier reliable," which is progress only where verification is genuinely easier: no PII leakage, no tool calls without authorization, no contradiction with high-priority instructions, no actions outside a declared capability set. For semantic appropriateness, intent-alignment, or open-ended factual accuracy, verification is as hard as generation and the asymmetry collapses.
 
-### 6.3 Cost
+**What it gets right.** Decouples what the model wants to do from what the system allows; lets formal methods apply where they can without forcing them where they can't; gives an auditable choke point.
 
-- **Latency**. Every token (or every action) requires a verifier pass.
-- **Coverage**. The verifier can only check invariants expressible in its model. Some invariants ("this output is appropriate") are not cleanly formalizable.
-- **Composition**. Verifier and generator must agree on a representation of context, provenance, and invariants. This interface is non-trivial to design.
-
-### 6.4 Hard problem
-
-**The verifier must be uncircumventable.** If the verifier is itself a trained neural network, it is attackable by the same mechanisms that attack the generator. If the verifier is symbolic, it can only check properties expressible in its formal language — which excludes most semantic properties of natural language.
-
-This sketch displaces the problem from "make the generator trustworthy" to "make the verifier reliable." Whether this is progress depends on whether verification is easier than generation **for the specific properties that matter**.
-
-For some properties — no PII leakage, no tool calls without explicit authorization, no contradiction with high-priority system instructions, no actions outside a declared capability set — verification is meaningfully easier and can be made robust.
-
-For other properties — semantic appropriateness, alignment with user intent, factual accuracy in open-ended generation — verification is roughly as hard as generation, and the asymmetry collapses.
-
-### 6.5 What it gets right
-
-- Decouples "what the model wants to do" from "what the system allows."
-- Allows formal methods to apply where they can (typed actions, capability checks) without requiring them where they can't (semantic appropriateness).
-- Provides an auditable choke point for safety-critical decisions.
-
-### 6.6 What it does not solve
-
-- Properties not expressible to the verifier (most semantic properties).
-- Attacks on the verifier itself (if it's neural) or on the property specification (if it's symbolic).
-- The provenance graph still has to come from somewhere — labeling problem recurs.
+**What it does not solve.** Properties not expressible to the verifier; attacks on the verifier (if neural) or on the spec (if symbolic); and the provenance graph still has to come from somewhere — the labeling problem recurs.
 
 ---
 
-## 7. Sketch 4: Capability tokens as architectural primitives
+## 7. Sketch 4 — Capability tokens as architectural primitives
 
-### 7.1 Mechanism
+**Mechanism.** The model emits a tool call only if it holds an **unforgeable capability token** for that tool — a cryptographic object issued by the orchestrator, scoped to a specific operation, with a bounded lifetime. This is the LLM analog of capability-based OS security (KeyKOS [9], seL4 [11], EROS [10]): authority flows through possession, not identity claims, a lineage running back to Dennis & Van Horn [8].
 
-The model emits tool calls only if it possesses an **unforgeable capability token** for that tool. Capability tokens are cryptographic objects issued by the orchestrator, scoped to specific operations, with bounded lifetimes.
+**CaMeL** [5] is the closest instantiation — a custom interpreter tracking capability metadata on values, enforcing policy in a protective system layer without modifying the LLM. The difference from this sketch is *where the gate sits*: inside the generation pathway (sketched here) vs. outside in an interpreter (CaMeL). Both move the trust boundary out of the model.
 
-This is the LLM-substrate analog of **capability-based OS security** (KeyKOS [9], seL4 [11], EROS [10], Fuchsia): authority to act flows through possession of capabilities, not through identity claims. The intellectual lineage runs back to Dennis & Van Horn (1966) [8].
-
-**Existing instantiation**: CaMeL [5] (Debenedetti et al., Google DeepMind + ETH Zurich, 2025) implements a closely related design — a custom Python interpreter that tracks capability metadata on values flowing through LLM agent systems. CaMeL achieves ~67% mitigation on AgentDojo and explicitly does not modify the LLM itself; instead it creates a "protective system layer" that enforces predefined policies. The remaining gap between CaMeL and this sketch is in whether capability checks live inside the model's generation pathway (sketched here) or outside in an interpreter (CaMeL's design). Both move the trust boundary out of the LLM; they differ in where the enforced gate sits.
-
-### 7.2 Current state vs. proposed state
-
-**Current**: Tool calls are just text patterns the model emits. The orchestrator parses, checks policy, executes or refuses. The model can emit any tool call it wants; refusal happens after generation.
-
-**Proposed**: Tool-call generation is gated **inside the model** on possession of a capability:
+Today, tool calls are just text the orchestrator parses and may refuse *after* generation. The proposal gates generation **inside the model** on the capability:
 
 ```
 generate_tool_call(tool_name, args) requires:
@@ -308,765 +180,241 @@ generate_tool_call(tool_name, args) requires:
     args ⊆ capability.allowed_scope
 ```
 
-The capability is provided in context by the orchestrator, scoped to the specific operation, expiring after use or after a short time bound. The model cannot generate a valid tool call without the capability because the tool-call generation pathway is conditioned on cryptographic signature verification.
+**Cost.** A round-trip to mint each capability; more verbose, higher-latency workflows; the orchestrator becomes an explicit critical component with formal interfaces; models must be trained to request capabilities before acting.
 
-### 7.3 Cost
+**Hard problem — coercion through language.** The check is real, but *getting* a capability is still mediated by natural-language interaction with the orchestrator. If adversarial input persuades the model to request a capability for an attacker-chosen operation, the orchestrator mints it and the protection is bypassed at the request layer. The sketch defeats **forged** capabilities, not **legitimately-issued capabilities for the wrong operation**. Partial defences — human approval above a risk threshold, an orchestrator trained to flag suspicious requests (which recurses), bounding mintable capabilities so worst-case blast radius is small — reduce probability without closing it.
 
-- Every tool call requires a round-trip to the orchestrator to mint a capability.
-- Workflows become more verbose; latency increases.
-- Orchestrator becomes a critical security component (it already is, but now explicitly so and with formal interfaces).
-- Models must be trained to request capabilities before attempting actions, which changes the agent interaction pattern.
+**What it gets right.** Imports 60 years of capability security where unforgeability matters most (action authorization); composes with existing orchestration.
 
-### 7.4 Hard problem
-
-**Coercion through language.** The capability check is real, but the path to _getting_ a capability is still mediated by the model's natural-language interaction with the orchestrator. If the model can be persuaded by adversarial input to request a capability for an attacker-chosen operation, the orchestrator mints the capability and the structural protection is bypassed at the request layer.
-
-This sketch protects against **forged** capabilities. It does not protect against **legitimately-issued capabilities for the wrong operation**.
-
-Defenses against the coercion path:
-
-- Require human approval for capability minting above a risk threshold.
-- Train the orchestrator (which may itself be an LLM, recursing the problem) to recognize suspicious capability requests.
-- Bound the space of mintable capabilities so that the worst-case unauthorized operation has bounded blast radius.
-
-None fully solves it. All reduce probability.
-
-### 7.5 What it gets right
-
-- Imports 50 years of capability-based security research directly into the LLM stack.
-- Provides an unforgeable layer where unforgeability matters most (action authorization).
-- Composes with existing orchestration patterns; doesn't require throwing them out.
-
-### 7.6 What it does not solve
-
-- The coercion path (see §7.4).
-- Capabilities themselves are tokens in context, so adversarial reasoning over their contents is still possible.
-- The orchestrator's policy for issuing capabilities is itself a soft security boundary.
+**What it does not solve.** The coercion path; adversarial reasoning over capability contents (they are still tokens in context); the orchestrator's issuing policy, which remains a soft boundary.
 
 ---
 
-## 8. Fifth enforcement pattern: parameterisation-class restriction (added v0.3.0)
+## 8. Pattern 5 — Parameterisation-class restriction
 
-The v0.1.0 / v0.2.0 taxonomy enumerated four architectural-enforcement patterns: masking attention (Sketch 1), bandwidth bottleneck (Sketch 2), verifier signoff (Sketch 3), capability gating (Sketch 4). Adjacent work surfaced in a 2026-05 review reveals a fifth pattern that was missed.
+A fifth enforcement pattern, distinct from the four sketches: **restrict the parameter manifold so the model cannot represent operators outside a chosen class.**
 
-### The pattern
+The canonical example is the Cayley transform $Q = (I - K/2)(I + K/2)^{-1}$ with skew-symmetric $K$, which produces an orthogonal $Q$ for *any* $K$. Orthogonality is enforced by the geometry of the parameterisation, not by training — no gradient step, adversarial input, or fine-tune can produce a non-orthogonal $Q$ this way, because non-orthogonal matrices are not in the image of the map. Where the sketches mask paths, narrow bandwidth, check outputs, or gate actions, Pattern 5 makes whole operator classes **unreachable by construction**.
 
-**Restrict the parameter manifold so the model cannot represent operators outside a chosen class.**
+The lineage is established (Lezcano-Casado & Martínez-Rubio 2019; unitary RNNs, Arjovsky et al. 2016, Wisdom et al. 2016); what is new is the connection to enforcement-by-construction in transformer adapters. The most recent LLM-scale demonstration is **CUA** [16], inserting Cayley-parameterised unitaries into frozen projection layers of Llama 3.1 8B and SmolLM2.
 
-Concrete example: the Cayley transform $Q = (I - K/2)(I + K/2)^{-1}$ with skew-symmetric $K$ produces an orthogonal $Q$ for _any_ values of $K$. The orthogonality is enforced by the geometry of the parameterisation, not by training. No gradient update, no adversarial input, no fine-tuning step can produce a non-orthogonal $Q$ through this construction, because non-orthogonal matrices are not in the image of the map.
+What this does **not** mean for trust:
 
-This is taxonomically distinct from the four sketches:
+- **Orthogonality is not a trust property.** Norm-preservation says nothing about whether attention can flow from untrusted to privileged tokens.
+- **The one cited demonstration is unreplicated**, and [16] carries a structural conflict of interest (its degraded baseline is the authors' own commercial product); the headline single-layer result is a 1.43% perplexity change.
+- **No trust-relevant operator class has been shown to admit such a parameterisation.** For orthogonality the construction exists; for "attention that respects token provenance," nobody has one, and it is not obvious the property is even a closed-form manifold restriction.
 
-- Sketch 1 masks attention paths but allows arbitrary weight values within the unmasked region.
-- Sketch 2 narrows bandwidth but does not constrain the operator class on the trusted side.
-- Sketch 3 checks outputs but the generator's parameter space is unrestricted.
-- Sketch 4 gates actions but the model's representational space is unrestricted.
-
-Pattern 5 says: **make certain operator classes unreachable by construction of the parameter manifold itself.**
-
-### Lineage
-
-Orthogonal/unitary parameterisations in neural networks are not new. Lezcano-Casado & Martínez-Rubio (ICML 2019) provided the Cayley parameterisation as a "cheap orthogonal constraint." Earlier work on unitary RNNs (Arjovsky et al. 2016; Wisdom et al. 2016) used related constructions to address vanishing gradients in recurrent networks. The pattern is established; what's new is its connection to enforcement-by-construction in transformer adapters.
-
-The most recent demonstration at LLM scale is **CUA — Cayley Unitary Adapters** [16] (Aizpurua et al., May 2026), which inserts Cayley-parameterised block-diagonal unitaries into frozen projection layers of Llama 3.1 8B and SmolLM2-135M. The CUA result shows that constrained-parameterisation adapters train under standard SFT + knowledge distillation and produce measurable behavior changes with very few parameters (6,144 params on one Llama projection site shifts WikiText perplexity by 1.43%).
-
-### What this does NOT mean for trust
-
-Critical to state explicitly, because the temptation to overclaim is real:
-
-1. **Orthogonality is not a trust property.** Enforcing that an operator is norm-preserving does not enforce that it cannot be influenced by adversarial inputs upstream. The trust problem is about whether attention can flow from untrusted-channel tokens to instruction-channel tokens; Pattern 5 does not address this.
-
-2. **The CUA result is not validated by independent replication.** It is one preprint (arXiv:2605.05914v1, 7 May 2026) by one research group with a structural conflict of interest: the SmolLM2 "degradation → recovery" framing uses Multiverse Computing's own commercial product (CompactifAI) as the degraded baseline. The Llama 3.1 8B result on a single layer is reported as 1.43% PPL improvement — small, real, but not yet replicated by outside groups.
-
-3. **Pattern 5 has not been demonstrated for any trust-relevant operator class.** The open question is whether there exist parameterisations whose image is exactly the set of operators preserving some trust property. For orthogonality the answer is yes (Cayley, Householder, exponential map). For "attention pattern that respects token provenance," nobody has constructed one, and it is not obvious that the property is expressible as a closed-form manifold restriction at all.
-
-### Implications for UNTRUST
-
-If a parameterisation existed whose image was exactly the set of attention operators respecting some token-type partition, Pattern 5 would give Sketch 1 a substrate-fix implementation that no training procedure could defeat. This is a non-trivial mathematical question. The conjecture is that such parameterisations exist for _some_ trust properties (linear, geometric, or structural properties of the operator) and do not exist for others (semantic, intent-related properties). Sorting which is which is a research question UNTRUST should now hold open.
-
-The honest restatement: UNTRUST's enforcement taxonomy was incomplete in v0.1.0/v0.2.0. Pattern 5 is a real fifth category, demonstrated for narrow mathematical properties (orthogonality) and unproven for trust-relevant properties. Whether trust admits such treatment is open.
+If such a parameterisation existed, it would give Sketch 1 a substrate-fix implementation no training could defeat. Whether *some* trust properties (linear, geometric, structural) admit this while others (semantic, intent-related) do not is the open question Pattern 5 leaves on the table.
 
 ---
 
-## 9. Pattern across all four sketches
+## 9. The pattern across the sketches
 
-None of the four sketches eliminates the trust problem. Each one **moves the problem** rather than dissolving it.
+None of the sketches eliminates the trust problem. Each **moves** it:
 
-| Sketch                   | Makes enforceable                 | Still relies on (statistical/soft) |
-| ------------------------ | --------------------------------- | ---------------------------------- |
-| 1. Typed attention masks | Cross-channel attention flow      | Labeling of token types            |
-| 2. Channel asymmetry     | Bandwidth into privileged channel | Encoder robustness                 |
-| 3. Verifier              | Action authorization              | Verifier itself; property specs    |
-| 4. Capability tokens     | Tool-call authority               | Capability-minting decisions       |
+| Sketch                   | Makes enforceable                 | Still relies on (soft)          |
+| ------------------------ | --------------------------------- | ------------------------------- |
+| 1. Typed attention masks | Cross-channel attention flow      | Labeling of token types         |
+| 2. Channel asymmetry     | Bandwidth into privileged channel | Encoder robustness              |
+| 3. Verifier              | Action authorization              | Verifier itself; property specs |
+| 4. Capability tokens     | Tool-call authority               | Capability-minting decisions    |
 
-**The shared structural insight**: trust requires a trusted base. The trusted base has to live somewhere. The substrate problem may not be "no enforcement is possible" — it is "enforcement requires a trusted root, and the trusted root cannot itself be the model."
+The shared insight: **trust requires a trusted base, and the trusted base cannot be the model.** A neural network cannot enforce trust boundaries on itself; the enforcement must come from a component its outputs cannot influence — necessarily smaller, simpler, and outside the network.
 
-Stated differently: **a neural network cannot enforce trust boundaries on itself.** The enforcement has to come from a component that the neural network's outputs cannot influence. That component is necessarily smaller, simpler, and outside the neural network proper.
-
-This is the same insight that operating systems landed on in the 1960s [8]: you cannot make user code safe by making user code more carefully written. You need a kernel — a smaller, formally analyzable component that the user code cannot subvert because the user code lacks the privilege required to subvert it. The kernel is not where the interesting computation happens. The kernel is where the trust lives. Capability-based OS work (KeyKOS [9], EROS [10], seL4 [11]) demonstrated that this principle scales to production systems and admits formal verification.
+This is what operating systems learned in the 1960s [8]: you do not make user code safe by writing it more carefully, you add a kernel — a small, analyzable component the user code lacks the privilege to subvert. The kernel is not where the interesting computation happens; it is where the trust lives. Capability-based OS work (KeyKOS [9], EROS [10], seL4 [11]) showed the principle scales and admits formal verification.
 
 ---
 
 ## 10. The synthesis: system, not model
 
-If the trusted base has to live outside the neural network, then the **new substrate is not a different kind of model**. It is a different kind of **system**, in which the model is one component sitting on top of a trusted base that the model cannot subvert.
+If the trusted base lives outside the network, the new substrate is not a different kind of *model* — it is a different kind of *system*, with the model as one untrusted component on top of a base it cannot subvert.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                                                         │
 │   Large Neural Component (LLM)                          │
 │   - Fluent, capable, untrusted                          │
 │   - Generates proposals, summaries, plans               │
-│   - Has NO direct access to actions, identity,          │
+│   - NO direct access to actions, identity,              │
 │     credentials, tool authority, or external state      │
-│                                                         │
 └──────────────────────────┬──────────────────────────────┘
                            │ (structured interface)
                            ▼
 ┌─────────────────────────────────────────────────────────┐
-│                                                         │
 │   Trusted Base                                          │
 │   - Small, auditable, formally analyzable               │
-│   - Owns: tool access, action authorization,            │
-│     identity, provenance, capability minting,           │
-│     audit logging, irreversibility gating               │
+│   - Owns: tool access, action authorization, identity,  │
+│     provenance, capability minting, audit, irreversibility gating │
 │   - Treats the LLM as an untrusted userspace process    │
-│                                                         │
 └──────────────────────────┬──────────────────────────────┘
-                           │
                            ▼
-                    External world
-                (tools, APIs, humans,
-                 sensors, actuators)
+                    External world (tools, APIs, humans, sensors)
 ```
 
-The neural component does what neural components are good at: fluent generation, pattern recognition, summarization, planning over open-ended spaces.
+The neural component does what neural components are good at — fluent generation, pattern recognition, summarization, open-ended planning. The trusted base does what trusted bases are good at — enforcing invariants, mediating access, holding keys, gating irreversible actions, maintaining audit trails. **The boundary between them is the new substrate.**
 
-The trusted base does what trusted bases are good at: enforcing invariants, mediating access, maintaining audit trails, gating irreversible actions, holding cryptographic keys, brokering between the neural component and anything it could affect.
-
-**The boundary between them is the new substrate.**
-
-This is not a new neural architecture. It is a new architectural commitment about where trust lives in an AI system. The neural component remains roughly what current LLMs are (with optional enhancements from Sketches 1–4 to harden specific boundaries). The trusted base is genuinely new work — formally verified, small enough to audit, designed with capability-based security from the ground up.
-
-Properties the trusted base needs:
-
-1. **Smallness**. Audit and formal verification require manageable size. The trusted base should be measured in thousands of lines of code, not millions.
-2. **Specification-completeness**. Every action the system can take must be expressible in the trusted base's policy language. Anything outside the policy is unrepresentable.
-3. **Cryptographic identity and capability**. Authority flows through unforgeable tokens, not through claims in language.
-4. **Provenance tracking**. Every piece of data the neural component sees is tagged with its source, trust level, and access path.
-5. **Irreversibility gating**. Any action with unbounded or external consequence requires human approval routed through the trusted base, not through the neural component.
-6. **Audit logging**. Every interaction at the boundary is logged with full context, immutably.
-
-The neural component sees only what the trusted base permits it to see, in the form the trusted base permits. The neural component emits proposals, but proposals become actions only through the trusted base. The neural component cannot bypass the trusted base because it cannot reach the world except through it.
+This is not a new neural architecture; it is a commitment about where trust lives. The model stays roughly what current LLMs are (optionally hardened by Sketches 1–4); the trusted base is genuinely new work — formally verified, small enough to audit, capability-based from the ground up. It needs: **smallness** (thousands of LOC, not millions), **specification-completeness** (anything outside the policy is unrepresentable), **cryptographic identity and capability**, **provenance tracking**, **irreversibility gating** (unbounded actions require human approval through the base), and **immutable audit logging**. The model sees only what the base permits, emits proposals that become actions only through the base, and cannot reach the world except through it.
 
 ---
 
-## 11. Required cross-disciplinary inputs
+## 11. Cross-disciplinary inputs
 
-Building this substrate is not an AI research project. It is the intersection of five fields that currently do not talk to each other enough:
+Building this substrate is integration work across five fields that do not talk to each other enough:
 
-1. **ML architecture** — designing the constrained channels, typed attention, encoder bottlenecks, verifier coupling.
-2. **Programming language theory** — formal type systems for trust, effect systems for capability tracking, linear types for resource bounds.
-3. **Operating systems** — capability-based security (seL4, KeyKOS), microkernel architectures, formally verified bases.
-4. **Cryptography** — unforgeable tokens, attested computation, signed actions, secure enclaves.
-5. **Distributed systems** — provenance tracking, audit trails, Byzantine-fault-tolerant orchestration, irrevocable logs.
+1. **ML architecture** — constrained channels, typed attention, encoder bottlenecks, verifier coupling.
+2. **Programming-language theory** — type systems for trust, effect systems for capabilities, linear types for resource bounds.
+3. **Operating systems** — capability-based security (seL4, KeyKOS), microkernels, formally verified bases.
+4. **Cryptography** — unforgeable tokens, attested computation, signed actions, enclaves.
+5. **Distributed systems** — provenance, audit trails, Byzantine-tolerant orchestration, irrevocable logs.
 
-The first is where the AI field's attention is. The other four are where the substrate fix lives. Each has mature literature, working systems, and unsolved-but-tractable open questions. None of them has been seriously imported into the LLM stack yet.
-
-The substrate fix probably emerges from **importing these traditions into AI**, not from new AI research alone. The work needed is integration work — taking a small formally-verified capability system (something like seL4 in spirit), bolting an LLM onto it as an untrusted userspace process, designing the boundary protocol carefully, and demonstrating that the resulting system is meaningfully harder to compromise than current LLM deployments.
+The AI field's attention is on the first; the substrate fix lives mostly in the other four. The likely path is importing those traditions into AI — bolting an LLM onto a small formally-verified capability base as an untrusted userspace process, designing the boundary protocol carefully, and showing the result is meaningfully harder to compromise than current deployments.
 
 ---
 
 # Bridge — The enforcement boundary
 
-## 12. The enforcement boundary: the precondition behind §2 (added v0.4.0)
+## 12. Why some properties can be enforced and others cannot
 
-§2 lists four properties a substrate fix may break and gives a criterion — defeatable by within-distribution input means mitigation, not-representable means fix. It does not say _why those four properties admit architectural enforcement and others do not_. A 2026-05 analysis of the adjacent "trustworthy AI" cluster — hallucination, calibration, honesty, intent-alignment, distribution-shift robustness, reasoning correctness — surfaced the missing precondition and, with it, a categorisation of properties by enforceability class.
+The §2 criterion carries an unstated precondition: **a property is architecturally enforceable only if it is a function of the computation's internal structure alone — not of any relation to something outside the computation.**
 
-This section adds that precondition and categorisation. It does **not** expand UNTRUST's scope. The adjacent cluster stays out of scope (§14); naming its members here sharpens the boundary rather than absorbing them. Rounding the document out into a general "trustworthy AI" treatment is exactly the drift §0 warns against, and is declined (see §12.5).
+The trust-boundary property satisfies this. "No information flows from untrusted-channel positions to privileged-operation positions" is a statement about attention paths; both relata are positions inside the forward pass; information flow is structural. That is *why* it can be masked to zero. When a property is instead defined by a relation to something outside the computation — the world's ground truth, the model's latent state, the principal's latent intent, the unbounded complement of the training distribution — there is no internal structure whose presence corresponds to the property. The §2 bar then cannot be *met* because it cannot be *posed*. This is stronger than "unsolved": the question is not well-formed.
 
-### 12.1 The unstated precondition
+Sorting by this precondition gives three classes, not two:
 
-The §2 criterion carries a precondition it never states: **a property is architecturally enforceable only if it is a function of the computation's internal structure alone — not of any relation to an object outside the computation.**
+| Class                              | Definition                                                  | Guarantee                                                  | Members                                                                          |
+| ---------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| **A. Structurally enforceable**    | Intrinsic to a closed formal system the architecture hosts | Unrepresentability — the §2 fix bar                       | Trust-boundary information flow; deductive-reasoning validity; verbatim-copy groundedness |
+| **B. Statistically guaranteeable** | Reference-dependent, but admits a distribution-level bound | Coverage contingent on a distributional assumption        | Calibration (conformal coverage under exchangeability [23]); bounded, known OOD  |
+| **C. Mitigation-only**             | Reference-dependent, no closed formal core, no bound       | None; probability- and blast-radius reduction only        | Factual truth [17][18]; honesty/non-deception [20][21]; intent-alignment; open-world OOD |
 
-The trust-boundary property satisfies this. "No information flows from untrusted-channel positions to privileged-operation positions" is a statement about attention paths; both relata are positions inside the forward pass; information flow is a structural feature of the computation. That is _why_ it can be masked to zero and made unrepresentable.
+The line that matters is **A versus {B, C}** — only Class A meets the §2 bar. **Class B is the one most likely to be mistaken for a fix and is not one**: a conformal guarantee is real, distribution-free, and finite-sample, but it is marginal rather than conditional and rests on exchangeability — precisely the assumption distribution shift breaks and that nothing in the architecture enforces. Factual truth sits firmly in Class C: its elimination is foreclosed by computability-theoretic [18] and statistical [17] inevitability results (with [19] arguing the bound is too loose to predict practical error rates — so "unenforceable," not "uniformly wrong").
 
-When a property is instead defined by a relation to something outside the computation — the external world's ground truth, the model's own latent state, the principal's latent intent, the unbounded complement of the training distribution — there is no internal structure whose presence or absence corresponds to the property. For such properties the §2 bar cannot be _met_ because it cannot be _posed_. This is stronger than "unsolved": it is a statement about where the question is even well-formed.
+**Deductive validity is the one place Sketch 3 reaches Class A.** "The chain is truth-preserving" — unlike "the chain looks plausible" — is, in a formalisable domain, intrinsic to a formal system and checkable by a **sound, deterministic** verifier (a proof checker, an SMT solver, program execution). A sound checker cannot be argued out of soundness by prose. But the enforcement is **conditional**: it holds only *relative to a formalisation*, and the natural-language → formal translation (autoformalisation) is a semantic act the checker cannot verify — a faithful checker over a wrong formalisation yields a validly-derived falsehood. It also covers only the formalisable fraction; for defeasible or natural-language argument, process-reward models [22] and neural verifiers revert to Class C. (That valid reasoning is not free is well-evidenced: stated chains are often unfaithful to the computation behind the answer — hint use was verbalised ~25%/~39% of the time across two frontier models [20] — and models rationalise bias-induced answers without disclosing the bias [21].)
 
-### 12.2 Three enforceability classes
+This exposes a pattern shared by **every** Class A enforcement here: each bottoms out in an un-enforceable judgment at the edge — Sketch 1's **labeling**, the checker's **autoformalisation**, and, for **groundedness** (output that verbatim-copies a source — the copy itself is structurally checkable), the **source-trust** that the source must be vouched for outside the copy mechanism. Architectural enforcement is never total; it terminates in a semantic act that must be *trusted*, not enforced. That is the same seam as the trusted base in §9 — the location where "enforced" hands off to "assumed."
 
-Sorting properties by this precondition yields three classes, not two. The fix/mitigation split in §2 is correct for trust but too coarse for the wider property space.
-
-| Class                              | Definition                                                                         | Guarantee type                                                                                       | Members                                                                                                                        |
-| ---------------------------------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| **A. Structurally enforceable**    | Intrinsic to a closed formal system the architecture can host                      | Unrepresentability — the §2 fix bar                                                                  | Trust-boundary information flow (this document); deductive-reasoning validity (§12.3); the verbatim-copy slice of groundedness |
-| **B. Statistically guaranteeable** | Reference-dependent, but admits a distribution-level guarantee under an assumption | Coverage / error bound _contingent on a distributional assumption the architecture does not enforce_ | Calibration — conformal coverage under exchangeability [23]; OOD only where the shift is known and bounded                     |
-| **C. Mitigation-only**             | Reference-dependent, with no closed formal core and no distributional guarantee    | None; probability- and blast-radius reduction only                                                   | Factual truth [17][18]; honesty / non-deception [20][21]; intent-alignment on clean input; open-world OOD                      |
-
-The line that matters for UNTRUST is A versus {B, C}: only Class A meets the §2 fix bar. **Class B is the one most likely to be mistaken for a fix and is not one.** A conformal guarantee is real, distribution-free, and finite-sample, but it is marginal rather than conditional, and it rests on exchangeability — precisely the assumption distribution shift breaks, and that nothing in the architecture enforces. By the §2 test it is defeated by input outside the assumed distribution. It is a guarantee of a different _kind_, not a weaker fix. Factual-truth membership in Class C is not a transient state of the art: elimination is foreclosed by computability-theoretic [18] and statistical [17] inevitability results (with [19] arguing the innate bound is too loose to explain practical error rates — the honest reading is that truth is unenforceable, not that errors are uniformly large).
-
-### 12.3 Sketch 3 extends to deductive validity
-
-Reasoning correctness splits across the A/C line. "The chain reaches a plausible-looking answer" is not the property; "the chain is truth-preserving" is. In a formalisable domain that property is intrinsic to a formal system and checkable by a **sound, deterministic** verifier — a proof checker, an SMT solver, program execution. This is Sketch 3 (§6) instantiated with a _symbolic, sound_ verifier: the case §6.4 already named as the one where the generator/verifier asymmetry holds. A sound checker cannot be argued out of soundness by persuasive prose, because it is not a neural network. Only verified outputs pass the gate; invalid chains are rejected by construction. This meets the §2 bar.
-
-The enforcement is **conditional**, and the condition is load-bearing:
-
-1. It enforces validity _relative to a formalisation_. The natural-language → formal translation (autoformalisation) is a semantic act the checker cannot verify. A faithful checker over a wrong formalisation yields a validly-derived falsehood. This is the exact analog of Sketch 1's labeling boundary (§4.4): the enforceable core is gated by an un-enforceable semantic seam.
-2. It covers only the formalisable fraction. For defeasible, empirical, or natural-language argument, validity is not formally defined; process-reward models [22] and neural verifiers revert to Class C — the verifier is itself attackable, per §6.4's "verification as hard as generation."
-
-Stated without the conditional, this would overclaim — the reasoning-correctness version of mistaking a mitigation for a fix. Stated with it, it is exactly as honest as Sketch 1: _given correct formalisation, the checker enforces; formalisation is not solved._
-
-That valid reasoning is not free for current models is well-evidenced: stated chains are frequently unfaithful to the computation that produced the answer — hint usage was verbalised about 25% of the time it occurred for one frontier reasoning model and about 39% for another [20], and models rationalise bias-induced answers without disclosing the bias [21]. A plausible chain is neither a valid one nor a faithful one; only a _checked_ chain is valid, and validity is not the same as faithfulness.
-
-### 12.4 The semantic-seam pattern
-
-Across every Class A enforcement in this document, the enforcement bottoms out at the same kind of un-enforceable judgment:
-
-- Sketch 1 — the **labeling** boundary (§4.4): types must be assigned by something outside the mask.
-- §12.3 — **autoformalisation**: the formal target must be produced by something outside the checker.
-- Groundedness — **source-trust**: the source must be vouched for by something outside the copy mechanism.
-
-The pattern: architectural enforcement is never total. It terminates in a semantic act that must be trusted, not enforced. This is consistent with §9's finding that trust requires a trusted base — the seam is where the base's own correctness is assumed. It is not a defect to be patched; it is the structural location where "enforced" hands off to "assumed."
-
-### 12.5 The boundary, restated for two categories
-
-This section originally declined to bring the wider clusters into scope. v1.0.0 reverses that: those clusters are now **Part II**. The enforcement boundary's job changes accordingly — it no longer _excludes_ them, it _sorts_ them.
-
-- The boundary **separates** Part I from Part II. Class A (intrinsic, structurally enforceable) is Part I — substrate fixes. Class B/C (reference-dependent) is Part II — non-substrate. The line is the §2 criterion sharpened by §12.1's precondition.
-- Admitting Part II is **not** conflating it with Part I. The lanes stay separate: substrate trust is enforced; the Part II clusters are mitigated or bounded, never substrate-fixed (§13). A single "fix" spanning both would be the conflation §0 warns against.
-- The boundary does **not** soften the §2 criterion. It is the same criterion, now doing classification across the whole space instead of guarding one category.
-
-The contribution is a map with a hard internal line, not a wider remit that blurs it. (The original v0.4.0 wording of this section — which declined the expansion now realized — is archived verbatim in B.6.)
+So the boundary **sorts** the space: Class A is Part I (substrate fixes); Class B/C is Part II (non-substrate). Admitting Part II is not conflating it with Part I — the lanes stay separate, and the §2 criterion is unchanged, now doing classification across the whole space rather than guarding one corner of it.
 
 ---
 
 # Part II — Non-substrate fix
 
-## 13. The wider trustworthy-AI remit (added v0.5.0)
+## 13. The wider trustworthy-AI clusters
 
-§12.5 declined to bring the adjacent "trustworthy AI" clusters into scope, on the ground that naming them was enough to locate the boundary. v0.5.0 reverses that decision: this section brings hallucination/accuracy, alignment/honesty, and robustness/OOD into UNTRUST's remit. The reversal is logged in B.2.6; §12.5's verbatim text is preserved as the v0.4.0 position.
+Beyond substrate trust lie the problems usually bundled under "trustworthy AI." This note brings them in only to **map and classify** them — not to claim a fix. Three of the four clusters are mitigation- or statistical-guarantee-class; saying so plainly, and keeping the fix-spaces in separate lanes, is the whole point. A single solution claiming to cover all four would be exactly the conflation §0 warns against.
 
-The reversal is narrower than it sounds, and the narrowness is the whole point. "In remit" here means the document **takes responsibility for mapping** each cluster — its failure mode, its fix space, its success criterion, and its enforceability class — not that it claims a substrate fix for each. Three of the four clusters are mitigation- or statistical-guarantee-class (§12.2); the honest content of bringing them in is to say so, and to keep their fix spaces in separate lanes. §2's criterion is not dissolved; it is **repurposed** from a wall around one cluster into the discriminator that runs across all four.
+| Problem cluster                 | Failure mode                                | Fix space                                                                                          | Success criterion                |
+| ------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------- | -------------------------------- |
+| Substrate trust (UNTRUST)       | Adversarial influence through input channels | Architectural enforcement: the four sketches (§4–§7) + Pattern 5 (§8)                             | Holds against worst-case input   |
+| Hallucination / accuracy        | Wrong in the absence of any adversary       | Training-data quality, retrieval augmentation [33], verification loops, calibration               | Statistical reduction of error   |
+| Alignment / honesty             | Behaviour diverges from principal intent    | RLHF [34], constitutional AI [35], character training, interpretability                            | Behaviour matches stated intent  |
+| Robustness / OOD                | Degrades outside the training distribution  | Wider training, ensembles, uncertainty quantification, conformal prediction [23]                   | Graceful degradation, not confident error |
 
-This is the move §0 warns about, done in the one form that does not become the drift: a frame that _separates_ the clusters, not a solution that _conflates_ them. A single solution covering all four would be precisely the "trustworthy AI" conflation this document exists to resist (§13.2). A single frame that holds them apart, each with its own success criterion, is the opposite — and is what §12.2 already implies.
+**The clusters are independent.** A model can be perfectly trustworthy in the UNTRUST sense and still hallucinate constantly; it can be perfectly accurate on clean input and catastrophically injectable. The clusters have different failure modes (adversary present vs. absent), different fix spaces (architecture vs. data vs. preference training vs. coverage), and different success criteria (worst-case guarantee vs. error rate vs. intent-match vs. graceful degradation). A mitigation for one does not touch the others.
 
-### 13.1 Four problem clusters
+Mapped onto the enforceability classes of §12: **substrate trust → Class A**; **hallucination → Class C**; **alignment/honesty → Class C**; **robustness/OOD → Class B** (bounded shift) / **Class C** (open world). Only substrate trust is Class A — one cell of the table. The per-cluster reading (with why each lands where it does):
 
-| Problem cluster                  | Failure mode                                          | Fix space                                                                                                                       | Success criterion                            |
-| -------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| Substrate trust (UNTRUST-style)  | Adversarial influence through input channels         | Architectural enforcement: masks (§4), bandwidth bottlenecks (§5), verifier signoff (§6), capability gating (§7), parameterisation-class restriction (§8) | Property holds against worst-case input      |
-| Hallucination / accuracy         | Model is wrong in the absence of any adversary       | Training-data quality, retrieval augmentation [33], verification loops, calibration training                                   | Statistical reduction of error rate          |
-| Alignment / honesty              | Model's behaviour diverges from user/principal intent | RLHF [34], constitutional AI [35], character training, interpretability                                                        | Behaviour matches stated intent              |
-| Robustness / OOD                 | Behaviour degrades outside the training distribution | Wider training, ensembles, uncertainty quantification, conformal prediction under bounded shift [23]                           | Graceful degradation rather than confident error |
+- **Hallucination / accuracy (Class C).** The model is simply wrong on a clean input. The fix space is statistical — retrieval grounding [33], verification loops, calibration, better data — and the success criterion is a lower error rate, never zero. There is no substrate fix, and not for lack of trying: hallucination is inevitable by statistical [17] and computability-theoretic [18] argument, and "is this true?" depends on a ground truth outside the computation. What UNTRUST-style thinking *does* buy is narrow: a sound symbolic checker (§12) enforces deductive *validity* over the formalisable fraction — a guarantee about a chain, not about a claim's truth.
+- **Alignment / honesty (Class C).** Value divergence with no adversary required. The fix space is preference- and feedback-based — RLHF [34], constitutional AI [35], interpretability — aiming at intent-match. There is no substrate fix, because intent is a relation to a latent principal state outside the computation; there is no internal structure that corresponds to "aligned." Worse, the model's own stated reasoning is an unreliable window [20][21], so honesty cannot be read off the output.
+- **Robustness / OOD (Class B / C).** Degradation outside the training distribution. Coverage methods — wider training, ensembles, uncertainty quantification, conformal prediction [23] — give a real distribution-free guarantee *where the shift is known and bounded* (Class B), but it rests on exchangeability, which shift breaks. In the open world the complement of the training distribution is unbounded, no guarantee is available, and only mitigations remain (Class C). The honest target is graceful degradation, not a worst-case bound.
 
-### 13.2 The clusters are independent
-
-The properties are orthogonal. A model can be perfectly trustworthy in the UNTRUST sense — no adversarial input can cross a trust boundary — and still hallucinate constantly. Conversely, a model can be perfectly accurate on clean inputs and catastrophically vulnerable to injection. Neither property implies the other, in either direction.
-
-The independence is structural, not incidental: the clusters have different failure modes (adversary present vs. absent; input-channel attack vs. distributional drift vs. value divergence), different fix spaces (architectural enforcement vs. data/retrieval vs. preference training vs. coverage methods), and different success criteria (worst-case guarantee vs. error-rate reduction vs. intent-match vs. graceful degradation). A mitigation for one does not address the others. This is why a single "trustworthy AI" product that claims to cover all four is conflating categories that require different engineering — the conflation §0 warns the framing drifts toward.
-
-### 13.3 Mapping to the §12.2 enforceability classes
-
-§13.1 cuts the space by problem; §12.2 cuts it by enforceability. They are two views of one line:
-
-- Substrate trust → **Class A** (structurally enforceable; meets the §2 fix bar).
-- Hallucination / accuracy → **Class C** (mitigation-only; reference-dependent on external ground truth, §12.1).
-- Alignment / honesty → **Class C** (mitigation-only; reference-dependent on a latent principal intent, §12.1).
-- Robustness / OOD → **Class B** where the shift is known and bounded (conformal coverage [23]); **Class C** in the open world (the complement of the training distribution is unbounded, §12.1).
-
-The §13 problem-space view and the §12.2 property-space view must not be read as two competing taxonomies. They are the same partition seen from two sides: only the substrate-trust cluster sits in Class A — which restates §12.5's "one cell of one row."
-
-### 13.4 Hallucination / accuracy — Class C, mitigation
-
-The failure mode needs no adversary: the model is simply wrong on a clean input. The fix space is statistical — retrieval grounding [33], verification loops, calibration training, better data — and the success criterion is a lower error rate, never zero. There is **no substrate fix**, and this is not a gap awaiting research: hallucination is inevitable by statistical [17] and computability-theoretic [18] argument, and "is this output true?" is reference-dependent on a ground truth outside the computation (§12.1), so there is no internal structure to mask or gate.
-
-What UNTRUST-style thinking _does_ buy here is narrow and already stated: §12.3's sound, symbolic verifier enforces _deductive validity_ over the formalisable fraction of a problem (a proof checker cannot be argued out of soundness). That is a Class A guarantee about a chain's validity, not about a claim's truth — and it covers only the formalisable slice. It is a real contribution, and it is small.
-
-### 13.5 Alignment / honesty — Class C, mitigation
-
-The failure mode is value divergence: the model's behaviour does not match the principal's intent, with no adversary required. The fix space is preference- and feedback-based — RLHF [34], constitutional AI [35], character training, interpretability — and the success criterion is intent-match. There is **no substrate fix**, because intent is a relation to a latent principal state _outside_ the computation (§12.1); there is no internal structure whose presence corresponds to "aligned." Worse, the model's own stated reasoning is not a reliable window onto its computation: chains of thought are frequently unfaithful [20][21], so even honesty cannot be read off the output. Honesty / non-deception and intent-alignment are the Class C members §12.2 already named.
-
-### 13.6 Robustness / OOD — Class B (bounded shift) / Class C (open world)
-
-The failure mode is degradation outside the training distribution. The fix space is coverage-oriented: wider training, ensembles, uncertainty quantification, and conformal prediction [23]. This cluster splits across the §12.2 line. Where the shift is **known and bounded**, conformal methods give a real, distribution-free coverage guarantee — Class B — but it is marginal and rests on exchangeability, the very assumption shift breaks, which is why §12.2 flags Class B as the category most often mistaken for a fix. In the **open world**, the complement of the training distribution is unbounded (§12.1), so no guarantee is available and only mitigations remain — Class C. The honest success criterion is graceful degradation, not a worst-case bound.
-
-### 13.7 What stays true
-
-The remit grew; the §2 distinction did not blur. Three commitments survive intact:
-
-1. **§2 still discriminates.** Every cluster's claim is still measured against "defeatable by within-distribution input?" — now as a cross-cluster test, not a one-cluster wall.
-2. **No Class C cluster receives a substrate fix.** Bringing a cluster into remit means classifying and mapping it honestly, including stating where only mitigations exist. A reader must not leave §13 thinking hallucination or intent-alignment is architecturally enforceable; §13.3–§13.6 say the opposite.
-3. **The lanes stay separate.** §13 is a frame that holds the clusters apart, not a solution that merges them. The independence in §13.2 is load-bearing.
-
-What does not yet match the remit: the document's **title**, §0, §14, and §12.5 still describe a substrate-trust-only document. Under the additive-only discipline those are preserved verbatim and revised only at the major (v1.0.0) bump; until then the title under-describes the document on purpose, and B.2.6 records the gap.
+What stays true across the expansion: the §2 criterion still discriminates (now as a cross-cluster test); no Class C cluster receives a substrate fix; and the lanes stay separate. A reader must not leave this part thinking hallucination or intent-alignment is architecturally enforceable — the mapping above says the opposite.
 
 ---
 
 # Back matter
 
-## 14. What this document does NOT address
+## 14. What this note does not address
 
-Honestly listed, so re-reading does not let any of these get smuggled in as "solved":
+Listed so nothing gets smuggled in as "solved":
 
-- **Semantic alignment.** A model that obeys the trusted base's invariants can still produce semantically bad output within the allowed space. Trust boundaries do not solve alignment.
-- **Deceived principals.** If the user is wrong, manipulated, or coerced, the system faithfully executes their (bad) intent. The substrate protects against attacks **through the model**, not attacks **through the user**.
-- **Trusted base correctness.** The trusted base is itself software with bugs. Formal verification reduces but does not eliminate this. The base is small enough to audit; "audited" is not the same as "perfect."
-- **Side channels.** Information leakage through timing, error messages, resource consumption, etc., is not addressed by the architecture and requires its own defenses.
-- **Supply chain.** The model's weights, the trusted base's source code, the build toolchain — all are points of compromise outside this architecture.
-- **Physical access.** The architecture assumes the trusted base runs on hardware that adversaries cannot directly modify.
-- **Multi-agent dynamics.** If multiple agents with trusted bases interact, the trust composition is its own design problem not addressed here.
-- **Computational cost.** The proposed architecture is plausibly slower and more expensive than current LLMs. Whether the cost is acceptable depends on the deployment context.
+- **Semantic alignment** — a model that obeys the trusted base's invariants can still produce bad output within the allowed space.
+- **Deceived principals** — if the user is wrong, manipulated, or coerced, the system faithfully executes their intent. The substrate protects against attacks *through the model*, not *through the user*.
+- **Trusted-base correctness** — the base is software with bugs; formal verification reduces but does not eliminate them. "Audited" is not "perfect."
+- **Side channels** — timing, error messages, resource use; needs its own defences.
+- **Supply chain** — weights, source, build toolchain are all compromise points outside this architecture.
+- **Physical access** — the base is assumed to run on hardware adversaries cannot modify.
+- **Multi-agent dynamics** — trust composition across interacting agents is its own problem.
+- **Computational cost** — the architecture is plausibly slower and more expensive; whether that is acceptable is deployment-dependent.
 
-Each of these is a real open problem. The substrate fix addresses the influence-on-the-model problem. It does not address everything else that can go wrong in an AI system.
+The substrate fix addresses influence-on-the-model. It does not address everything else that can go wrong.
 
 ---
 
 ## 15. Open questions
 
-Questions that this document does not answer and that anyone seriously working on the substrate would need to wrestle with:
-
-1. **How is the labeling boundary made trustworthy?** Sketches 1 and 2 depend on token types being assigned correctly. What component does the labeling, and what protects it?
-2. **Can the verifier in Sketch 3 be made non-neural for the properties that matter?** If so, which properties? If not, what makes the verifier harder to attack than the generator?
-3. **What is the minimal trusted base for an LLM agent?** seL4 is ~9.3K LOC (8,700 C + 600 assembler) [11]. What is the equivalent for an LLM-mediated system?
-4. **How does the trusted base interface with the neural component?** Specifically, what is the protocol — structured messages? typed channels? capability handshakes? — and what are its security properties?
-5. **What does training look like for a model designed to live above a trusted base?** Standard pretraining does not include the constraint "you cannot reach the world directly." Does this change training, fine-tuning, or only deployment?
-6. **What is the simplest end-to-end demonstration that would show the substrate fix works?** Probably not a full agent. Probably a narrow, well-bounded task where injection attacks against current systems are documented and the proposed system is provably immune to those specific attacks.
-7. **How does this compose with existing mitigations?** The substrate fix should not require throwing out RLHF, capability scoping, or human-in-the-loop. It should layer with them.
-8. **What is the upgrade path from current systems?** A substrate change that requires throwing out everything will not be adopted. A substrate change that adds a trusted base alongside existing LLMs is more plausible.
+1. **How is the labeling boundary made trustworthy?** Sketches 1 and 2 depend on correct type assignment — by what component, protected how?
+2. **Can Sketch 3's verifier be made non-neural for the properties that matter?** If not, what makes it harder to attack than the generator?
+3. **What is the minimal trusted base for an LLM agent?** seL4 is ~9.3K LOC [11]; what is the LLM-mediated equivalent?
+4. **What is the base↔model protocol**, and what are its security properties?
+5. **What does training look like for a model designed to live above a trusted base?** Pretraining does not include "you cannot reach the world directly."
+6. **What is the simplest end-to-end demonstration** — likely a narrow task where documented injection attacks are provably impossible against the proposed system?
+7. **How does it compose with existing mitigations?** It should layer with RLHF, capability scoping, and human-in-the-loop, not replace them.
+8. **What is the upgrade path?** A change requiring a full rebuild will not be adopted; adding a trusted base alongside existing LLMs is more plausible.
 
 ---
 
 ## 16. Notes on use
 
-This document is not a roadmap. It is a starting point.
+This is not a roadmap; it is a starting point. Read once for the shape; re-read each sketch looking for what breaks; test whether the trusted-base synthesis (§10) actually holds; treat the cross-disciplinary inputs (§11) as homework and the open questions (§15) as the real, years-long agenda.
 
-The intended mode of use:
+It is deliberately not a pitch. It does not argue anyone should do this — it argues that *if* someone does substrate-level work, this is roughly what it looks like and what its honest limits are. The substrate problem stays unsolved because the field's incentive gradient does not point at it; whether the work is worth doing is a question the person doing it must answer repeatedly, over years.
 
-- Read once for the shape.
-- Re-read with attention to specific sketches, looking for what breaks.
-- Re-read with attention to the synthesis (§10) and whether the trusted-base framing actually holds.
-- Treat the cross-disciplinary inputs (§11) as homework: each of those fields has decades of relevant work that the AI field has not yet absorbed.
-- Treat the open questions (§15) as the actual research agenda. Each one is a years-long project if taken seriously.
-
-The document is **deliberately not a pitch**. It does not argue that anyone should do this. It argues that _if someone is going to do substrate-level work_, this is roughly what the work looks like and what its honest limits are.
-
-The substrate problem stays unsolved because the field's incentive gradient does not point at it. Work against the gradient is slower, lonelier, and produces fewer legible wins. Whether that work is worth doing is not a question this document answers. It is a question the person doing the work has to answer for themselves, repeatedly, over years.
-
-If the answer is yes, this document is a starting point. If the answer is no, this document is at least a clear statement of what would be required, useful for arguing against bad mitigation-only positions in conversations where the distinction matters.
-
-Either way, the substrate problem is real. The mitigations are not solutions. The new trunk exists, somewhere, in the space these sketches gesture at. Building it, or finding the path to it, is the work that compounds.
+Either way: the substrate problem is real, the mitigations are not solutions, and the path worth finding is the one that compounds.
 
 ---
 
-## Appendix A: References (added v0.2.0)
+## References
 
-References [1]–[15] verified 2026-05-27 via web search against primary sources (arXiv, USENIX, ACM, OpenAI, Microsoft Research, conference proceedings). Later additions — [16] (v0.3.0) and [17]–[32] (v0.4.0 / v0.4.1) — were verified on their own dates (most on 2026-05-28), recorded in Appendix B.1 and B.2.4.
+**[1] ASIDE — Architecturally Separated Instruction-Data Embeddings.** Zverev, E., et al. (2025). arXiv:2503.10566 (ICLR 2026). Orthogonal rotation of data-token embeddings; closest instantiation of Sketch 1.
+**[2] ISE — Instructional Segment Embedding.** Wu, T., et al. (2024). ICLR 2025. Role-specific offset vectors.
+**[3] StruQ — Defending Against Prompt Injection with Structured Queries.** Chen, S., Piet, J., Sitawarin, C., & Wagner, D. (2024). USENIX Security 2025. arXiv:2402.06363. Secure front-end + fine-tuned model.
+**[4] Can LLMs Separate Instructions From Data?** Zverev, E., et al. (2025). ICLR 2025. arXiv:2403.06833. Foundational measurement: no current LLM separates reliably.
+**[5] CaMeL — Defeating Prompt Injections by Design.** Debenedetti, E., et al. (2025). arXiv:2503.18813 (Google DeepMind + ETH Zurich). Capability-tracking interpreter; solves 77% of AgentDojo tasks with provable security (vs. 84% undefended); closest instantiation of Sketch 4.
+**[6] The Dual LLM Pattern.** Willison, S. (April 2023). https://simonwillison.net/2023/Apr/25/dual-llm-pattern/. Privileged + quarantined LLM architecture.
+**[7] The Instruction Hierarchy.** Wallace, E., et al. (2024). arXiv:2404.13208 (OpenAI). Training-time role priority; a mitigation, not a fix.
+**[8] Programming Semantics for Multiprogrammed Computations.** Dennis, J. B. & Van Horn, E. C. (1966). CACM 9(3):143–155. The original capability paper.
+**[9] The KeyKOS Nanokernel Architecture.** Bomberger, A. C., et al. (1992). USENIX. Capability-based OS in commercial production since 1983.
+**[10] EROS — A Fast Capability System.** Shapiro, J. S., Smith, J. M., & Farber, D. J. (1999). SOSP '99. Persistent capabilities.
+**[11] seL4 — Formal Verification of an OS Kernel.** Klein, G., et al. (2009). SOSP '09. 8,700 LOC C + 600 assembler; ~200K-line Isabelle/HOL proof.
+**[12] Spotlighting.** Hines, K., et al. (2024). arXiv:2403.14720 (Microsoft). Delimiting/datamarking/encoding; production mitigation.
+**[13] Not What You've Signed Up For (Indirect Prompt Injection).** Greshake, K., et al. (2023). AISec '23. arXiv:2302.12173. The canonical threat paper.
+**[14] OWASP Top 10 for LLM Applications 2025.** OWASP Gen AI Security Project. LLM01 = Prompt Injection.
+**[15] MITRE ATLAS.** https://atlas.mitre.org/. AML.T0051.000 (direct), AML.T0051.001 (indirect), AML.T0054 (jailbreak).
+**[16] CUA — Cayley Unitary Adapters.** Aizpurua, B., et al. (2026). arXiv:2605.05914 (Multiverse Computing et al.). LLM-scale parameterisation-class adapters. *Conflict of interest*: the degraded baseline is the authors' own commercial product; the single-layer Llama 3.1 8B result (1.43% PPL) is unreplicated.
+**[17] Why Language Models Hallucinate.** Kalai, A. T., Nachum, O., Vempala, S. S., & Zhang, E. (2025). arXiv:2509.04664. Hallucination as binary-classification error; evals reward guessing over abstention.
+**[18] Hallucination is Inevitable.** Xu, Z., Jain, S., & Kankanhalli, M. (2024). arXiv:2401.11817. Computability-theoretic inevitability.
+**[19] Hallucinations Are Inevitable but Can Be Made Statistically Negligible.** Suzuki, A., et al. (2025). arXiv:2502.12187. The innate bound is too loose to predict practical error rates.
+**[20] Reasoning Models Don't Always Say What They Think.** Chen, Y., et al. (2025). arXiv:2505.05410 (Anthropic). Hint use verbalised ~25%/~39% across two frontier models.
+**[21] Language Models Don't Always Say What They Think.** Turpin, M., Michael, J., Perez, E., & Bowman, S. R. (2023). NeurIPS 2023. arXiv:2305.04388. CoT rationalises biased answers.
+**[22] Let's Verify Step by Step.** Lightman, H., et al. (2023). arXiv:2305.20050 (OpenAI). A learned process-reward verifier — Class C, attackable.
+**[23] Conformal prediction.** Vovk, Gammerman & Shafer (2005); Angelopoulos & Bates (2023). Marginal, finite-sample, distribution-free coverage under exchangeability — basis for Class B.
+**[24] CLIP.** Radford, A., et al. (2021). ICML 2021. arXiv:2103.00020. VLM encoder-bottleneck precedent (mechanism only).
+**[25] Flamingo.** Alayrac, J.-B., et al. (2022). NeurIPS 2022. arXiv:2204.14198. Perceiver Resampler → fixed small latent set; concrete bottleneck mechanism.
+**[26] IBProtector — Protecting Your LLMs with Information Bottleneck.** Liu, Z., Wang, Z., Xu, L., et al. (2024). NeurIPS 2024. arXiv:2404.13968. Information-bottleneck jailbreak defence; input-preprocessing mitigation, not channel asymmetry.
+**[27] SecurityLingua — Security-Aware Prompt Compression.** Li, Y., Ahn, S., Jiang, H., et al. (2025). arXiv:2506.12707. Compression-based jailbreak defence; mitigation class.
+**[28] Constitutional Classifiers.** Sharma, M., et al. (2025). arXiv:2501.18837 (Anthropic). Neural I/O guard; jailbreak success 86% → 4.4%; a mitigation.
+**[29] Constitutional Classifiers++.** Cunningham, H., Wei, J., Wang, Z., et al. (2026). arXiv:2601.04603 (Anthropic). Successor that cuts the classifier's added compute from ~23.7% to ~1%; still a neural I/O guard.
+**[30] Boundary Point Jailbreaking of Black-Box LLMs.** Davies, X., Giglemiani, G., Lau, E., Winsor, E., Irving, G., & Gal, Y. (2026). arXiv:2602.15001 (UK AISI + Oxford OATML). Defeats Constitutional Classifiers and a GPT-5 input classifier — corroborates Sketch 3's hard problem.
+**[31] Grammar-Constrained Decoding.** Geng, S., et al. (2023). EMNLP 2023. arXiv:2305.13971. Masks grammar-violating tokens — genuine enforcement, but of a *syntactic* property only.
+**[32] Grammar-Aligned Decoding.** Park, K., et al. (2024). arXiv:2405.21047. Greedy grammar masking distorts the output distribution — the gate is sound, not free.
+**[33] Retrieval-Augmented Generation.** Lewis, P., et al. (2020). NeurIPS 2020. arXiv:2005.11401. Grounding in retrieved documents; hallucination mitigation.
+**[34] InstructGPT / RLHF.** Ouyang, L., et al. (2022). arXiv:2203.02155. (Foundational: Christiano et al. 2017, arXiv:1706.03741.) Canonical alignment fix-space entry; training-time mitigation.
+**[35] Constitutional AI.** Bai, Y., et al. (2022). arXiv:2212.08073 (Anthropic). RLAIF against a written constitution; distinct from Constitutional *Classifiers* [28][29]; mitigation class.
 
-**[1] ASIDE — Architecturally Separated Instruction-Data Embeddings**
-Zverev, E., Kortukov, E., Lukasik, A., Kuleshov, K., Abdelnabi, S., Tabesh, S., Singla, A., Fritz, M., & Lampert, C. H. (2025). _ASIDE: Architectural Separation of Instructions and Data in Language Models._ arXiv:2503.10566. ICLR 2026.
-Available: https://arxiv.org/abs/2503.10566
+*Foundational work on orthogonal/unitary parameterisations (Pattern 5):* Lezcano-Casado & Martínez-Rubio (ICML 2019); Arjovsky et al. (ICML 2016); Wisdom et al. (NeurIPS 2016).
 
-**[2] ISE — Instructional Segment Embedding**
-Wu, T., Zhang, S., Song, K., Xu, S., Zhao, S., Agrawal, R., Indurthi, S. R., Xiang, C., Mittal, P., & Zhou, W. (2024). _Improving LLM Safety with Instructional Segment Embedding._ ICLR 2025.
-Available: https://proceedings.iclr.cc/paper_files/paper/2025/
-
-**[3] StruQ — Defending Against Prompt Injection with Structured Queries**
-Chen, S., Piet, J., Sitawarin, C., & Wagner, D. (2024). _StruQ: Defending Against Prompt Injection with Structured Queries._ USENIX Security 2025. arXiv:2402.06363.
-Available: https://arxiv.org/abs/2402.06363 | https://www.usenix.org/conference/usenixsecurity25/presentation/chen-sizhe
-
-**[4] Zverev et al. — Can LLMs Separate Instructions From Data?**
-Zverev, E., Abdelnabi, S., Tabesh, S., Fritz, M., & Lampert, C. H. (2025). _Can LLMs Separate Instructions From Data? And What Do We Even Mean By That?_ ICLR 2025. arXiv:2403.06833.
-Available: https://arxiv.org/abs/2403.06833
-Foundational measurement work showing no current LLM achieves reliable instruction-data separation.
-
-**[5] CaMeL — Defeating Prompt Injections by Design**
-Debenedetti, E., Shumailov, I., Fan, T., Hayes, J., Carlini, N., Fabian, D., Kern, C., Shi, C., Terzis, A., & Tramèr, F. (2025). _Defeating Prompt Injections by Design._ arXiv:2503.18813. Google DeepMind + ETH Zurich.
-Available: https://arxiv.org/abs/2503.18813
-Direct precedent for Sketch 4. CaMeL = "CApabilities for MachinE Learning."
-
-**[6] Willison — Dual LLM Pattern**
-Willison, S. (April 2023). _The Dual LLM pattern for building AI assistants that can resist prompt injection._
-Available: https://simonwillison.net/2023/Apr/25/dual-llm-pattern/ (and discussed in https://simonwillison.net/2025/Apr/11/camel/)
-First articulation of privileged + quarantined LLM architecture. CaMeL [5] extends this pattern.
-
-**[7] Instruction Hierarchy (OpenAI)**
-Wallace, E., Xiao, K., Leike, R., Weng, L., Heidecke, J., & Beutel, A. (2024). _The Instruction Hierarchy: Training LLMs to Prioritize Privileged Instructions._ arXiv:2404.13208.
-Available: https://arxiv.org/abs/2404.13208 | https://openai.com/index/the-instruction-hierarchy/
-Training-time approach to role-based privilege ordering: system > developer > user > tool output.
-
-**[8] Dennis & Van Horn — Capabilities (foundational)**
-Dennis, J. B. & Van Horn, E. C. (1966). _Programming semantics for multiprogrammed computations._ Communications of the ACM 9(3): 143–155.
-DOI: 10.1145/365230.365252
-Original capability paper. Introduced C-lists and the sphere of protection.
-
-**[9] KeyKOS**
-Bomberger, A. C., Frantz, W. S., Hardy, A. C., Hardy, N., Landau, C. R., & Shapiro, J. S. (1992). _The KeyKOS Nanokernel Architecture._ Proceedings of the USENIX Workshop on Micro-Kernels and Other Kernel Architectures.
-KeyKOS was in commercial production from 1983 (initially as GNOSIS). Nanokernel ~20,000 LOC.
-
-**[10] EROS — A Fast Capability System**
-Shapiro, J. S., Smith, J. M., & Farber, D. J. (1999). _EROS: A Fast Capability System._ Proceedings of the 17th ACM Symposium on Operating Systems Principles (SOSP '99). Operating Systems Review 33(5): 170–185.
-DOI: 10.1145/319151.319163
-
-**[11] seL4 — Formal Verification of an OS Kernel**
-Klein, G., Elphinstone, K., Heiser, G., Andronick, J., Cock, D., Derrin, P., Elkaduwe, D., Engelhardt, K., Kolanski, R., Norrish, M., Sewell, T., Tuch, H., & Winwood, S. (2009). _seL4: Formal Verification of an OS Kernel._ SOSP '09; later in Communications of the ACM.
-seL4 is 8,700 lines of C plus 600 lines of assembler. Proof is ~200,000 lines of Isabelle/HOL script. First formal proof of functional correctness of a complete general-purpose OS kernel.
-
-**[12] Spotlighting (Microsoft)**
-Hines, K., Lopez, G., Hall, M., Zarfati, F., Zunger, Y., & Kıcıman, E. (2024). _Defending Against Indirect Prompt Injection Attacks With Spotlighting._ arXiv:2403.14720. Microsoft.
-Available: https://arxiv.org/abs/2403.14720
-Three techniques: delimiting, datamarking, encoding. Production-deployed at Microsoft.
-
-**[13] Greshake et al. — Indirect Prompt Injection (canonical paper)**
-Greshake, K., Abdelnabi, S., Mishra, S., Endres, C., Holz, T., & Fritz, M. (2023). _Not What You've Signed Up For: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection._ AISec '23 (Proceedings of the 16th ACM Workshop on AI and Security). arXiv:2302.12173.
-Available: https://arxiv.org/abs/2302.12173
-Threat taxonomy: data theft, worming, ecosystem contamination, unauthorized API calls.
-
-**[14] OWASP LLM Top 10 (2025)**
-OWASP Gen AI Security Project (2025). _OWASP Top 10 for LLM Applications 2025._
-Available: https://genai.owasp.org/llmrisk/llm01-prompt-injection/
-LLM01:2025 — Prompt Injection ranks #1.
-
-**[15] MITRE ATLAS**
-MITRE Corporation. _Adversarial Threat Landscape for Artificial-Intelligence Systems._
-Available: https://atlas.mitre.org/
-Relevant techniques: AML.T0051.000 (Direct Prompt Injection), AML.T0051.001 (Indirect Prompt Injection), AML.T0054 (Jailbreak Injection).
-
-**[16] CUA — Cayley Unitary Adapters (added v0.3.0)**
-Aizpurua, B., Singh, S., Kshetrimayum, A., Jahromi, S. S., & Orús, R. (2026). _Quantum-enhanced Large Language Models on Quantum Hardware via Cayley Unitary Adapters._ arXiv:2605.05914v1. Multiverse Computing + DIPC + Tecnun + Ikerbasque.
-Available: https://arxiv.org/abs/2605.05914
-Recent demonstration of constrained-parameterisation adapters at LLM scale. Cited in §8 as one instance of Pattern 5 (parameterisation-class restriction).
-**Conflict-of-interest note**: The compressed-SmolLM2 backbone used as the "degraded baseline" in the paper's recovery framing is generated by CompactifAI, Multiverse Computing's own commercial product. The Llama 3.1 8B result on a single projection site (1.43% PPL improvement, 6,144 parameters) is independent of this baseline but has not been independently replicated.
-
-**[17] Kalai et al. — Why Language Models Hallucinate (added v0.4.0)**
-Kalai, A. T., Nachum, O., Vempala, S. S., & Zhang, E. (2025). _Why Language Models Hallucinate._ arXiv:2509.04664. OpenAI + Georgia Tech.
-Available: https://arxiv.org/abs/2509.04664
-Cited in §12.2. Argues hallucination originates as binary-classification error (generative error rate lower-bounded at roughly twice the misclassification rate) and is reinforced post-training by evaluations that reward guessing over abstention. Cites Kleinberg & Mullainathan (2024) and Kalavasis et al. (2025) on the consistency/breadth trade-off.
-
-**[18] Xu, Jain & Kankanhalli — Hallucination is Inevitable (added v0.4.0)**
-Xu, Z., Jain, S., & Kankanhalli, M. (2024). _Hallucination is Inevitable: An Innate Limitation of Large Language Models._ arXiv:2401.11817 (v2, 2025).
-Available: https://arxiv.org/abs/2401.11817
-Cited in §12.2. Computability-theoretic result: hallucination defined as inconsistency between a computable LLM and a computable ground-truth function; a computable model cannot learn all computable functions, so divergence is unavoidable for a general problem-solver.
-
-**[19] Suzuki et al. — Inevitable but Statistically Negligible (added v0.4.0)**
-Suzuki, A., He, Y., Tian, F., & Wang, Z. (2025). _Hallucinations are inevitable but can be made statistically negligible._ arXiv:2502.12187.
-Available: https://arxiv.org/abs/2502.12187
-Cited in §12.2 as the counter to [18]: the innate inevitability bound is too loose to explain practical LLM error rates, so "inevitable" should not be read as "uniformly frequent."
-
-**[20] Chen et al. — Reasoning Models Don't Always Say What They Think (added v0.4.0)**
-Chen, Y., Benton, J., Radhakrishnan, A., et al. (2025). _Reasoning Models Don't Always Say What They Think._ Alignment Science Team, Anthropic. arXiv:2505.05410.
-Available: https://arxiv.org/abs/2505.05410
-Cited in §12.3. CoT-faithfulness measurement: when a model used an injected hint, it verbalised that use only ~25% of the time (one frontier reasoning model) and ~39% (another); outcome-based RL improves faithfulness then plateaus.
-
-**[21] Turpin et al. — Unfaithful CoT Explanations (added v0.4.0)**
-Turpin, M., Michael, J., Perez, E., & Bowman, S. R. (2023). _Language Models Don't Always Say What They Think: Unfaithful Explanations in Chain-of-Thought Prompting._ NeurIPS 2023. arXiv:2305.04388.
-Available: https://arxiv.org/abs/2305.04388
-Cited in §12.3. Biasing features (e.g. reordering options) systematically change answers while the CoT rationalises the biased answer without mentioning the bias — plausible yet misleading explanations.
-
-**[22] Lightman et al. — Let's Verify Step by Step (added v0.4.0)**
-Lightman, H., Kosaraju, V., Burda, Y., Edwards, H., Baker, B., Lee, T., Leike, J., Schulman, J., Sutskever, I., & Cobbe, K. (2023). _Let's Verify Step by Step._ OpenAI. arXiv:2305.20050.
-Available: https://arxiv.org/abs/2305.20050
-Cited in §12.3 as an instance of a _learned_ (process-reward) verifier — Class C, attackable — in contrast to a sound symbolic checker. Verification status: see B.3.
-
-**[23] Conformal prediction — distribution-free coverage (added v0.4.0)**
-Vovk, V., Gammerman, A., & Shafer, G. (2005). _Algorithmic Learning in a Random World._ Springer. / Angelopoulos, A. N., & Bates, S. (2023). _A Gentle Introduction to Conformal Prediction and Distribution-Free Uncertainty Quantification._ Foundations and Trends in Machine Learning.
-Cited in §12.2 as the basis for Class B: marginal, finite-sample, distribution-free coverage P(Y ∈ C(X)) ≥ 1 − α under exchangeability. Verification status: see B.3.
-
-**[24] CLIP — Learning Transferable Visual Models From Natural Language Supervision (added v0.4.1)**
-Radford, A., Kim, J. W., Hallacy, C., Ramesh, A., Goh, G., Agarwal, S., Sastry, G., Askell, A., Mishkin, P., Clark, J., Krueger, G., & Sutskever, I. (2021). ICML 2021. arXiv:2103.00020.
-Available: https://arxiv.org/abs/2103.00020
-Supports §3 / §5 as a VLM precedent for the encoder-bottleneck pattern (an image encoder produces a compact embedding the language side conditions on; the image is structurally _data_, not directly attendable tokens). Mechanism precedent only, not a security primitive.
-
-**[25] Flamingo — a Visual Language Model for Few-Shot Learning (added v0.4.1)**
-Alayrac, J.-B., Donahue, J., Luc, P., Miech, A., Barr, I., Hasson, Y., Lenc, K., et al. (2022). NeurIPS 2022. arXiv:2204.14198.
-Available: https://arxiv.org/abs/2204.14198
-Supports §3 / §5. The Perceiver Resampler maps a variable-size grid of visual features to a _fixed, small_ set of latent tokens (e.g. 64) that condition a frozen LM via cross-attention — the concrete instantiation of Sketch 2's bandwidth-bottleneck _mechanism_, though not proposed as a security mechanism.
-
-**[26] IBProtector — Protecting Your LLMs with Information Bottleneck (added v0.4.1)**
-_Protecting Your LLMs with Information Bottleneck_ (2024). arXiv:2404.13968.
-Available: https://arxiv.org/abs/2404.13968
-Supports §3 / §5. First jailbreak defense based on the Information-Bottleneck principle (input compression that extracts and preserves only task-relevant information). Closest security-relevant instance of the _information-reduction intuition_ behind Sketch 2 — but an input-preprocessing **mitigation** (a learned, attackable compressor; no architectural channel separation), not the asymmetric-bandwidth primitive. Author list not independently captured this pass — see B.3.
-
-**[27] SecurityLingua — Defense via Security-Aware Prompt Compression (added v0.4.1)**
-_SecurityLingua: Efficient Defense of LLM Jailbreak Attacks via Security-Aware Prompt Compression_ (2025). arXiv:2506.12707.
-Available: https://arxiv.org/abs/2506.12707
-Supports §3 / §5. Compression-based jailbreak defense that highlights suspicious instructions during compression. Same classification as [26]: a compression _mitigation_, not channel asymmetry. Author list not independently captured this pass — see B.3.
-
-**[28] Constitutional Classifiers (added v0.4.1)**
-Sharma, M., et al. (2025). _Constitutional Classifiers: Defending against Universal Jailbreaks across Thousands of Hours of Red Teaming._ Anthropic. arXiv:2501.18837.
-Available: https://arxiv.org/abs/2501.18837
-Supports §3 / §6. Production-grade input/output classifier safeguards trained on a natural-language constitution; reduced jailbreak success from 86% to 4.4% in the first generation. An inference-time **neural verifier operating as an I/O guard** — a §2 mitigation, not the trust-invariant signoff primitive of Sketch 3. Confirms §6.4: a neural verifier is attackable (see [30]).
-
-**[29] Constitutional Classifiers++ (added v0.4.1)**
-_Constitutional Classifiers++: Efficient Production-Grade Defenses against Universal Jailbreaks_ (2026). Anthropic. arXiv:2601.04603.
-Available: https://arxiv.org/abs/2601.04603
-Supports §3 / §6. Replaces input/output-only classifiers with a single _exchange_ classifier (evaluates output in the context of its input) at ~40× lower cost than the baseline. Still a neural I/O guard (mitigation class).
-
-**[30] Boundary Point Jailbreaking (added v0.4.1)**
-Davies, X., et al. (2026). _(Boundary Point Jailbreaking, BPJ.)_ UK AI Security Institute + University of Oxford (OATML). arXiv:2602.15001.
-Available: https://arxiv.org/abs/2602.15001
-Supports §3 / §6 as the empirical corroboration of §6.4: BPJ succeeds against Constitutional Classifiers [28] and GPT-5's input classifier on held-out misuse questions, demonstrating that production neural guards remain defeatable. The attackability of the neural verifier is exactly the hard problem Sketch 3 names.
-
-**[31] Grammar-Constrained Decoding (added v0.4.1)**
-Geng, S., Josifoski, M., Peyrard, M., & West, R. (2023). _Grammar-Constrained Decoding for Structured NLP Tasks without Finetuning._ EMNLP 2023. arXiv:2305.13971.
-Available: https://arxiv.org/abs/2305.13971
-Supports §3 / §6. Masks provably grammar-violating tokens at each decode step, guaranteeing outputs conform to a context-free grammar by construction. This is genuine §2-grade architectural enforcement — but of a **syntactic** property, not a trust invariant, and not semantic/functional correctness. The decode-time analog of the §6.4 / §12.3 split (sound verifier works for the formally-expressible fraction only).
-
-**[32] Grammar-Aligned Decoding (added v0.4.1)**
-Park, K., Wang, J., Berg-Kirkpatrick, T., Polikarpova, N., & D'Antoni, L. (2024). _Grammar-Aligned Decoding._ arXiv:2405.21047.
-Available: https://arxiv.org/abs/2405.21047
-Supports §3 / §6 for the caveat on [31]: greedy grammar masking distorts the LLM's distribution away from the true distribution over grammatical outputs; "the gate is sound" does not mean "the gated distribution is unchanged." The enforcement is real; it is not free.
-
-**[33] RAG — Retrieval-Augmented Generation (added v0.5.0)**
-Lewis, P., Perez, E., Piktus, A., Petroni, F., Karpukhin, V., Goyal, N., Küttler, H., Lewis, M., Yih, W., Rocktäschel, T., Riedel, S., & Kiela, D. (2020). _Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks._ NeurIPS 2020. arXiv:2005.11401.
-Available: https://arxiv.org/abs/2005.11401
-Supports §13.1 / §13.4 as a canonical hallucination-mitigation fix-space entry (grounding generation in retrieved documents). Mitigation class by the §2 criterion, not a substrate fix. Verification status: see B.3.
-
-**[34] InstructGPT / RLHF (added v0.5.0)**
-Ouyang, L., Wu, J., Jiang, X., Almeida, D., Wainwright, C. L., Mishkin, P., Zhang, C., Agarwal, S., Slama, K., Ray, A., et al. (2022). _Training language models to follow instructions with human feedback._ NeurIPS 2022. arXiv:2203.02155. (Foundational RLHF formulation: Christiano, P., Leike, J., Brown, T., Martic, M., Legg, S., & Amodei, D. (2017). _Deep Reinforcement Learning from Human Preferences._ NeurIPS 2017. arXiv:1706.03741.)
-Available: https://arxiv.org/abs/2203.02155
-Supports §13.1 / §13.5 as the canonical alignment fix-space entry. A training-time mitigation by the §2 criterion (cf. instruction hierarchy [7]); not a substrate fix. Verification status: see B.3.
-
-**[35] Constitutional AI (added v0.5.0)**
-Bai, Y., Kadavath, S., Kundu, S., Askell, A., Kernion, J., Jones, A., Chen, A., et al. (2022). _Constitutional AI: Harmlessness from AI Feedback._ Anthropic. arXiv:2212.08073.
-Available: https://arxiv.org/abs/2212.08073
-Supports §13.1 / §13.5 as an alignment fix-space entry (RLAIF against a written constitution). Distinct from Constitutional _Classifiers_ [28][29], which are inference-time I/O guards. Mitigation class. Verification status: see B.3.
-
-### Foundational work on orthogonal/unitary parameterisations (relevant to §8)
-
-- Lezcano-Casado, M. & Martínez-Rubio, D. (2019). _Cheap orthogonal constraints in neural networks: A simple parameterization of the orthogonal and unitary group._ ICML 2019. — Cayley parameterisation as a general technique.
-- Arjovsky, M., Shah, A., & Bengio, Y. (2016). _Unitary Evolution Recurrent Neural Networks._ ICML 2016. — Earlier work on unitary RNN constraints.
-- Wisdom, S., Powers, T., Hershey, J. R., Le Roux, J., & Atlas, L. (2016). _Full-Capacity Unitary Recurrent Neural Networks._ NeurIPS 2016.
-
-### Additional contextual sources (not directly cited inline)
-
-- Anthropic. _Prompt Injection Defenses Research._ Reports browser agent attack success rate reduced to ~1% on Claude Opus 4.5 via RL and classifier improvements.
-- AI Vulnerability Database (AVID): https://avidml.org/ — community-maintained, attempting CVE-equivalent for AI systems.
-- IBM X-Force Think (April 2026). _What OpenClaw reveals about agentic AI security risks._ Notes the CVE system's structural inadequacy for AI vulnerabilities.
+*Additional context (not cited inline):* Anthropic prompt-injection defences (browser-agent attack success reduced to ~1% on Claude Opus 4.5); AI Vulnerability Database (avidml.org); IBM X-Force Think (April 2026) on agentic-AI security risk.
 
 ---
 
-## Appendix B: Verification log (added v0.2.0)
+## Sources & confidence
 
-This appendix documents what was verified, what was corrected, and what remains uncertain after the 2026-05-27 verification pass.
+The point of this section is the same as the document's: keep what is *verified* apart from what is *asserted*, so neither is mistaken for the other.
 
-_Cross-references in this log point to current (v1.0.0) section numbers; where an entry quotes earlier wording, the section number shown is the current one (recover the original via the B.2.7 map). The sole exception is B.6, which archives pre-v1.0.0 text verbatim, with its original numbering._
-
-### B.1 Claims verified against primary sources
-
-| Claim                                                                                                                                                   | Source                 | Status                                                                                                   |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------- |
-| LLMs lack instruction-data separation                                                                                                                   | [4] Zverev et al. 2025 | ✓ Confirmed; foundational benchmark                                                                      |
-| ASIDE = orthogonal rotation of data-token embeddings                                                                                                    | [1]                    | ✓ Confirmed                                                                                              |
-| StruQ = secure front-end + fine-tuned model                                                                                                             | [3]                    | ✓ Confirmed                                                                                              |
-| Instruction Hierarchy (OpenAI) trains role priority                                                                                                     | [7]                    | ✓ Confirmed                                                                                              |
-| Spotlighting = delimiting/datamarking/encoding                                                                                                          | [12]                   | ✓ Confirmed                                                                                              |
-| CaMeL = capability-based interpreter, ~67% mitigation on AgentDojo                                                                                      | [5]                    | ✓ Confirmed                                                                                              |
-| Dual LLM pattern coined by Willison, April 2023                                                                                                         | [6]                    | ✓ Confirmed                                                                                              |
-| Greshake et al. canonical indirect prompt injection paper                                                                                               | [13]                   | ✓ Confirmed                                                                                              |
-| Dennis & Van Horn 1966 introduced capabilities                                                                                                          | [8]                    | ✓ Confirmed                                                                                              |
-| KeyKOS in commercial production since 1983                                                                                                              | [9]                    | ✓ Confirmed                                                                                              |
-| EROS = Shapiro 1999, capability-based, single-level store                                                                                               | [10]                   | ✓ Confirmed                                                                                              |
-| OWASP LLM Top 10 2025; LLM01 = Prompt Injection                                                                                                         | [14]                   | ✓ Confirmed                                                                                              |
-| MITRE ATLAS techniques AML.T0051.000 / AML.T0051.001                                                                                                    | [15]                   | ✓ Confirmed                                                                                              |
-| Why-LMs-hallucinate: generative error ≥ ~2× classification error; eval incentives reward guessing                                                       | [17]                   | ✓ Confirmed (verified 2026-05-28)                                                                        |
-| Hallucination inevitability via computability / learning theory                                                                                         | [18]                   | ✓ Confirmed (verified 2026-05-28)                                                                        |
-| Counter-claim: inevitable but statistically negligible; innate bound too loose for practical rates                                                      | [19]                   | ✓ Confirmed (verified 2026-05-28)                                                                        |
-| CoT unfaithfulness; hint-use verbalised ~25% / ~39% across two frontier reasoning models                                                                | [20]                   | ✓ Confirmed (verified 2026-05-28)                                                                        |
-| CoT explanations plausible yet misleading under biasing features                                                                                        | [21]                   | ✓ Confirmed (verified 2026-05-28)                                                                        |
-| CLIP / Flamingo as VLM encoder-bottleneck precedents (Flamingo Perceiver Resampler → fixed small latent set)                                            | [24][25]               | ✓ Confirmed (verified 2026-05-28; closes the B.4 "VLM claims uncited" gap for §3/§5)                   |
-| Information-compression jailbreak defenses exist (IBProtector 2024; SecurityLingua 2025) but are input-preprocessing mitigations, not channel asymmetry | [26][27]               | ✓ Title/ID/venue confirmed; classification as mitigation confirmed (author lists not captured — see B.3) |
-| Constitutional Classifiers = neural I/O guard; jailbreak success 86% → 4.4% (first gen); 2026 exchange-classifier successor                             | [28][29]               | ✓ Confirmed (verified 2026-05-28)                                                                        |
-| Production neural guards remain defeatable — BPJ defeats Constitutional Classifiers and a GPT-5 input classifier (corroborates §6.4)                    | [30]                   | ✓ Confirmed (verified 2026-05-28)                                                                        |
-| Grammar-constrained decoding guarantees CFG conformance by construction (syntactic only, not semantic; distorts distribution)                           | [31][32]               | ✓ Confirmed (verified 2026-05-28)                                                                        |
-
-### B.2 Corrections made in v0.2.0
-
-| v0.1.0 claim                                                            | Issue                                                                                                             | v0.2.0 correction                                                                         |
-| ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| "seL4 is ~10K LOC" (§15)                                                | Slight overstatement                                                                                              | Updated to "~9.3K LOC (8,700 C + 600 assembler)" with citation [11]                       |
-| Document framed sketches as speculative                                 | Significantly understated prior art                                                                               | Added §3 acknowledging CaMeL [5], ASIDE [1], StruQ [3], etc. as existing instantiations |
-| "doesn't generalize to 'agent that books my flights'" re: neurosymbolic | Still accurate; CaMeL's Python-interpreter approach is closer to neurosymbolic-systems-thinking than acknowledged | Sketch 3's framing is preserved; the convergence with CaMeL is noted in §3 instead      |
-
-### B.2.1 Additions in v0.3.0
-
-| Issue identified                                                                                                                                                            | Resolution                                                                                                                                                                                                                      |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Enforcement taxonomy in §1–§9 enumerates four patterns; missed a fifth (parameterisation-class restriction) demonstrated in the orthogonal/unitary NN literature since 2016 | Added §8 documenting Pattern 5, with explicit caveats that it is demonstrated for narrow mathematical properties only, not trust                                                                                              |
-| CUA paper (Aizpurua et al. 2026) surfaced during review as recent LLM-scale instance                                                                                        | Cited as [16] with conflict-of-interest disclosure (Multiverse Computing's own CompactifAI is the degraded baseline in the paper's SmolLM2 recovery framing); foundational orthogonal-parameterisation lineage cited separately |
-| Risk of overclaiming that Pattern 5 addresses trust                                                                                                                         | Explicit non-claim block in §8 listing what the pattern does NOT mean for trust; open question framed as "does any trust-relevant property admit closed-form manifold restriction?" — not asserted as answerable              |
-
-### B.2.2 Updates in v0.3.1
-
-| Change                                                                                         | Resolution                                                                                                                                                                                                                                                                                                                                                                        |
-| ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Distribution status changed from "internal reference only" to "publicly visible working draft" | Reworded the front-matter blockquote following the version line. No content claims change. The codename is still a working identifier, not branding — clarified that the name is not intended for product/marketing/external naming use even though the document itself is now readable. README's Distribution and License sections updated correspondingly outside the document. |
-
-### B.2.3 Additions in v0.4.0
-
-| Issue identified                                                                                                  | Resolution                                                                                                                                                                                                                                  |
-| ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| §2 enumerates four enforceable properties but never states the precondition that makes them enforceable           | Added §12.1 stating the precondition (the property must be intrinsic to the computation's internal structure); sharpens §2's criterion without altering its verbatim text                                                                   |
-| The fix/mitigation split in §2 is two-way; too coarse once the wider property space (calibration, OOD) is in view | Added §12.2 three-class taxonomy (structurally enforceable / statistically guaranteeable / mitigation-only). A vs {B, C} is the §2 line. Class B (conformal-style coverage) is flagged as the category most likely to be mistaken for a fix |
-| Sketch 3's verifier-asymmetry case (§6.4) was never connected to deductive-reasoning validity                     | Added §12.3, stated **conditionally** — enforcement holds relative to a formalisation, with autoformalisation as the §4.4-analog seam — to avoid the reasoning-correctness version of mistaking a mitigation for a fix                      |
-| The labeling / autoformalisation / source-trust seams were noted separately but not as one phenomenon             | Added §12.4 (semantic-seam pattern); tied to §9's trusted-base finding                                                                                                                                                                      |
-| Risk that the addition reads as scope expansion into "trustworthy AI"                                             | Added §12.5 explicit non-collapse block; §14 exclusions reaffirmed and given their reason (reference-dependence). The bump is framed as sharpening the boundary, not widening the remit                                                     |
-
-### B.2.4 Sketch 2 and Sketch 3 prior-art re-verification (added v0.4.1)
-
-A pass on 2026-05-28 re-checked the §3 prior-art assessments for Sketch 2 (channel asymmetry / bandwidth bottleneck) and Sketch 3 (verifier as architectural primitive) against 2024–2026 primary sources. Both assessments **survive**; the pass supplies evidence and adds adjacent work, and corrects no body claim.
-
-**Sketch 2 — "least instantiated"; "no major LLM-specific paper proposes the full asymmetric-bandwidth approach as a security primitive."**
-
-| Finding                                                                                                                                                                                                                                                                                                  | Status                                          |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| The VLM encoder-bottleneck precedent (previously uncited; flagged in B.4) is real and now cited: CLIP [24], Flamingo [25]. Flamingo's Perceiver Resampler compresses variable-size visual features to a small fixed latent set conditioning a frozen LM — the bottleneck _mechanism_, not a security use | Verified; §3/§5 mechanism claim substantiated |
-| Information-compression _defenses_ have appeared since v0.2.0: IBProtector [26] (2024, IB principle) and SecurityLingua [27] (2025, security-aware prompt compression). They instantiate the information-reduction _intuition_ against jailbreaks                                                        | Verified existence                              |
-| These are input-preprocessing **mitigations** by the §2 criterion: the compressor is a learned, attackable component; there is no architectural channel separation; untrusted content still enters one flat context                                                                                      | Classification confirmed                        |
-| Net: Sketch 2 remains the least instantiated _as an architectural primitive_. The gap is now documented, not closed                                                                                                                                                                                      | Claim survives                                  |
-
-**Sketch 3 — "no direct LLM-scale implementation"; "second least-instantiated"; adjacent work is training-time, not architectural.**
-
-| Finding                                                                                                                                                                                                                                                                                                                                                          | Status                               |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| Production neural I/O guards now exist: Constitutional Classifiers [28] (Sharma et al. 2025; 86% → 4.4%) and a 2026 exchange-classifier successor [29]. These are inference-time **neural verifiers as I/O guards** — the "classifier-based guards" §2 already classes as mitigations                                                                            | Verified; mitigation class confirmed |
-| §6.4's prediction (a neural verifier is attackable by the same means as the generator) is now empirically corroborated: Boundary Point Jailbreaking [30] (2026) defeats Constitutional Classifiers and a GPT-5 input classifier                                                                                                                                  | Verified; strengthens §6.4           |
-| The only decode-coupled verifier that meets the §2 bar in 2026 is grammar-constrained decoding [31]: sound enforcement, but of a **syntactic** property only, and it distorts the distribution [32]. This is the decode-time instance of the §6.4 / §12.3 split — sound verifier for the formally-expressible fraction, mitigation for trust/semantic properties | Verified                             |
-| Net: Sketch 3 has no trust-invariant verifier instantiation at LLM scale. The claim survives, and the surrounding evidence (neural guards defeated; sound decoding confined to syntax) strengthens the document's thesis                                                                                                                                         | Claim survives                       |
-
-### B.2.5 Internal-consistency corrections (added v0.4.2)
-
-A 2026-05-28 cross-check of numbering, headings, cross-references, and citation linkage surfaced four discrepancies, none affecting a content claim. Per the verbatim-preservation rule, the §0 item is logged here rather than edited in place; the other three are metadata/citation fixes applied in Appendix A and B.4.
-
-| Discrepancy                                                                                                                                                       | Resolution                                                                                                                                                                                                                                  |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| §0 reads "The synthesis (§9)", but the section titled "The synthesis" is §10 (§16 and B.3 #2 both point to §10).                                                    | §0's verbatim v0.1.0 text is preserved. The intended referent is §9–§10: the trusted-base _insight_ ("trust requires a trusted base") is stated in §9; the system-level _synthesis_ is §10. Read "(§9)" there as "(§9–§10)".                  |
-| Appendix A preamble read "All references verified 2026-05-27", but [16]–[32] were added in later versions with their own verification dates.                       | Preamble scoped to [1]–[15]; later additions point to B.1 / B.2.4 (most verified 2026-05-28).                                                                                                                                              |
-| Appendix A labelled [24]–[32] "Cited in §3 / §5 / §6", but those body sections are preserved verbatim and contain no [24]–[32] inline brackets.                 | Relabelled "Supports". A patch cannot alter verbatim body, so these refs are necessarily linked appendix-side (via the v0.4.1 changelog and B.1 / B.2.4), not by inline brackets. [17]–[23] are unaffected — they are inline-cited in §12. |
-| B.4's VLM-citation bullet still described the gap as open after B.1 declared it closed by [24][25].                                                                | B.4 bullet now points forward to its v0.4.1 closure (B.2.4).                                                                                                                                                                              |
-
-### B.2.6 Scope reversal in v0.5.0
-
-v0.5.0 reverses a scope decision recorded in v0.4.0. Per the verbatim-preservation rule, the prior text stays in place and the reversal is logged here.
-
-| Prior position                                                                                                                            | Reversed by      | Note                                                                                                                                                                                                                                                                                                                                            |
-| --------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| §12.5 (v0.4.0): "does not bring Class C problems into scope … does not claim UNTRUST is a 'trustworthy AI' document."                     | §13 (v0.5.0)     | §12.5's verbatim text is preserved as the v0.4.0 position. v0.5.0 brings hallucination/accuracy, alignment/honesty, and robustness/OOD into the document's remit — but as mapped, classified clusters, not substrate-fixed ones. The fix/mitigation distinction (§2) and the "only Class A is structurally enforceable" finding (§12.2) are unchanged; what changed is that the document now discusses the non-A clusters in their own right instead of excluding them. |
-| §14's "Semantic alignment" exclusion                                                                                                     | §13.5 (partial)  | §14 listed semantic alignment among what the document "does NOT address." §13.5 now addresses it as a Class C mitigation cluster. The remaining §14 exclusions (deceived principals, trusted-base correctness, side channels, supply chain, physical access, multi-agent dynamics, computational cost) stand.                                       |
-| Title / subtitle / §0 framing as a substrate-trust-only document                                                                          | (not yet)        | The non-additive rewrite of the title, §0, §14, and §12.5 to match the widened remit is deferred to the eventual major (v1.0.0) bump. Until then the title under-describes the document; this gap is intentional under the additive-only discipline.                                                                                              |
-
-### B.2.7 Bipartite refactor in v1.0.0
-
-The first major bump reorganized the document into two categories — Part I (substrate fix) and Part II (non-substrate fix) — joined by a bridge (§12, the enforcement boundary). This required the document's first non-additive changes: a renumber and reorder of every section, plus a rewrite of the title, §0, and §12.5 (was §13.5). Superseded text is archived verbatim in B.6. No content claim changed; the §2 criterion and the §12.2 (was §13.2) taxonomy are intact. This supersedes B.2.6's "deferred to v1.0.0" note — the scope reversal is now fully realized.
-
-Old → new section map:
-
-| Old   | New  | Section                                       |
-| ----- | ---- | --------------------------------------------- |
-| §0    | §0   | Epistemic status (reframed)                   |
-| §1    | §1   | The substrate problem                         |
-| §2    | §2   | What "substrate fix" requires                 |
-| §0.5  | §3   | Prior art and precedent                       |
-| §3    | §4   | Sketch 1 (typed attention masks)              |
-| §4    | §5   | Sketch 2 (channel asymmetry)                  |
-| §5    | §6   | Sketch 3 (verifier)                           |
-| §6    | §7   | Sketch 4 (capability tokens)                  |
-| §0.6  | §8   | Fifth enforcement pattern (Pattern 5)         |
-| §7    | §9   | Pattern across all four sketches              |
-| §8    | §10  | The synthesis: system, not model              |
-| §9    | §11  | Required cross-disciplinary inputs            |
-| §13   | §12  | The enforcement boundary (Bridge)             |
-| §14   | §13  | The wider trustworthy-AI remit (Part II)      |
-| §10   | §14  | What this document does NOT address           |
-| §11   | §15  | Open questions                                |
-| §12   | §16  | Notes on use                                  |
-
-Subsection minor numbers are unchanged (e.g. old §13.2 → §12.2; old §14.3 → §13.3; old §3.4 → §4.4).
-
-### B.2.8 §0 / §3 consistency correction (v1.0.2)
-
-§0's epistemic-status bullet still read "Nobody has built any of them at LLM scale. Some have partial precedents in narrow domains" — a v0.1.0 claim that §3's honest repositioning (added v0.2.0) had already called "substantively wrong." The v1.0.0 §0 rewrite carried the stale bullet forward by oversight. v1.0.2 aligns the bullet with §3: several sketches have working partial implementations (ASIDE, StruQ, CaMeL) at LLM scale, and the accurate claim is that no current approach is a _complete_ substrate fix (none meets the §2 criterion fully). No position changed — this removes a self-contradiction; §3 has held the corrected view since v0.2.0. The original §0 wording remains archived verbatim in B.6.
-
-### B.3 Claims that remain unverified or uncertain
-
-The following claims in the document are not directly backed by a cited source, and represent reasoning or speculation by the author of the document:
-
-1. **The four-sketch taxonomy itself** — typed attention masks, channel asymmetry, verifier, capability tokens. This organization is not from any single paper. It is an ad-hoc categorization. Whether it's the right cut of the space is itself an open question.
-2. **The "trusted base" synthesis in §10** — analogizing LLM trust to OS kernel architecture. This framing is intuitive and consistent with the OS security literature, but no published paper at LLM scale frames it this way explicitly. CaMeL [5] is closest but doesn't use the kernel framing.
-3. **The cross-disciplinary list in §11** — five fields needing integration. This is the author's claim; no source enumerates exactly these five.
-4. **The probability estimates implied by language like "more speculative than the sketches"** — these are not calibrated against any benchmark.
-5. **The claim that the field's incentive gradient points away from substrate work** — sociologically plausible but not formally established.
-
-#### Added in v0.4.0 (asserted, not re-verified in the 2026-05-28 pass)
-
-6. **Conformal prediction's precise guarantee [23]** — the marginal, finite-sample, distribution-free coverage statement and its exchangeability assumption are stated from standard references (Vovk et al.; Angelopoulos & Bates), not re-verified against primary sources this pass. The §12.2 Class B argument depends on this being stated correctly.
-7. **Process-reward-model characterisation [22]** — cited as a _learned, attackable_ verifier to contrast with a sound symbolic checker. The contrast is conceptual; the specific empirical claims of [22] were not re-verified this pass.
-8. **The Class A status of formal-reasoning validity (§12.3)** — rests on soundness being a property of the proof checker / SMT solver / interpreter, which is a mathematical fact, not an empirical one. However, **no specific end-to-end LLM-plus-checker system** (autoformalisation pipeline, e.g. Lean-backed proving) was verified here as achieving §2-grade enforcement in practice. The conditional framing (enforcement _given_ correct formalisation) is exactly the hedge this uncertainty requires; the autoformalisation seam is unsolved (§12.3, §12.4).
-9. **Supporting claims referenced in discussion but not in the document body and not re-verified**: RLHF degrading the calibration of base models (GPT-4 system card); sycophancy as a measured RLHF artifact (Sharma et al. 2023); conformal prediction under covariate shift via known importance weights (Tibshirani et al. 2019); the Kleinberg & Mullainathan (2024) consistency/breadth trade-off (cited inside [17], not independently checked).
-
-#### Added in v0.4.1 (partially verified)
-
-10. **Author lists for [26] IBProtector and [27] SecurityLingua were not independently captured** in the 2026-05-28 pass. Title, arXiv ID, year, and the mitigation-class characterisation are confirmed from primary-source abstracts; the full author lists are not recorded here and should be completed before any external citation. The classification of both as input-preprocessing mitigations (not channel asymmetry) does not depend on authorship.
-11. **The [30] Boundary Point Jailbreaking author attribution** is recorded as Davies et al. (UK AI Security Institute + Oxford OATML) from the correspondence/affiliation line in the source; the full author list was not captured. The load-bearing claim — that BPJ defeats Constitutional Classifiers and a GPT-5 input classifier — is confirmed from the abstract/figure.
-
-#### Added in v0.5.0 (asserted, not re-verified in this pass)
-
-12. **References [33] (RAG, Lewis et al. 2020), [34] (InstructGPT / RLHF, Ouyang et al. 2022; Christiano et al. 2017), and [35] (Constitutional AI, Bai et al. 2022)** are cited in §13 as canonical fix-space entries for the adjacent clusters. They are well-established works, but their bibliographic details and specific claims were not independently re-verified in this pass. They are used only to _name_ fix spaces (retrieval grounding; preference-based training; RLAIF), all of which §13 classifies as mitigation-class — the classification does not depend on the citations being exact.
-13. **The §13 four-cluster cut itself** (substrate / hallucination / alignment / robustness, by failure-mode / fix-space / success-criterion) is an organisational frame, like the four-sketch taxonomy (B.3 #1). Its claim to be the right cut of the space is asserted, not established. The load-bearing part is its mapping onto §12.2's A/B/C classes (§13.3), which follows from the §12.1 precondition rather than from the cut.
-14. **The scope expansion in §13 is an editorial decision, not a verified finding.** It widens what the document discusses; it does not change any verified claim about what is or is not structurally enforceable. The substrate problem remains unsolved (B.5); the three newly-admitted clusters are admitted as mitigation- or statistical-guarantee-class precisely because no substrate fix for them exists.
-
-### B.4 What the verification pass did NOT cover
-
-- Neuroscience claims (predictive coding, hierarchical Bayesian inference, System 1/System 2 analogies): not verified against primary neuroscience sources.
-- Adversarial examples timeline: assumed correct (Goodfellow et al. 2014 is canonical) but not re-verified.
-- Vision-language model architecture claims (CLIP, Flamingo, encoder bottleneck pattern): assumed correct from general knowledge; not cited. **(Closed in v0.4.1 — now cited as [24][25]; see B.2.4.)**
-- Claims about other architectures (Mamba, RWKV, diffusion LMs): assumed correct; not separately verified.
-- The C-to-Rust analogy and the broader paradigm-shift framing: philosophical/historical claim, not verified against secondary sources.
-- The "EchoLeak" and other specific 2025-2026 attack incidents mentioned in conversation but not in document body.
-
-### B.5 Reader's note
-
-This verification pass made the document **more accurate** in two ways:
-
-1. It connected the sketches to their existing instantiations (especially CaMeL for Sketch 4 and ASIDE for Sketch 1), so re-reading does not mistake them for novel proposals.
-2. It made the claims about the trusted-base synthesis honest about its lineage in capability-based OS security rather than presenting it as a new framing.
-
-It did **not** change the core position of the document:
-
-- The substrate problem remains unsolved.
-- All current approaches (including the cited papers) are partial fixes — measurable improvements that do not eliminate the failure class.
-- The architectural enforcement criterion in §2 is not met by any current production system.
-- Defense in depth is the operational reality; substrate fix is the open research problem.
-
-The core claim survives verification. The framing around it became more accurate.
-
-### B.6 Superseded framing (archived at v1.0.0)
-
-The v1.0.0 refactor rewrote three pieces that prior versions had preserved verbatim. To keep the document's record-keeping intact, their pre-v1.0.0 text is archived here unchanged (original section numbering retained).
-
-**Title block (as of v0.5.0):**
-
-> # Substrate Architecture for LLM Trust Boundaries
-> **Codename: UNTRUST**
-> **Four sketches and a synthesis. Working draft. Not designs.**
-
-**§0 Epistemic status (as of v0.5.0):**
-
-> - These are **sketches**, not architectures. They are first-pass structural ideas, not implementations or even specifications.
-> - **Nobody has built any of them** at LLM scale. Some have partial precedents in narrow domains.
-> - Each sketch has **at least one unsolved hard problem**. None is complete.
-> - The synthesis (§7) is **more speculative** than the individual sketches. Treat it as a hypothesis about where the answer might live, not a claim to have found it.
-> - This document is a **starting point for thinking**, not a finished argument. The expected mode of use is to interrogate each piece, find what breaks, and either repair it or replace it.
-> - The conversation that produced this drifted toward comfortable mitigation framings multiple times before settling on the substrate framing. The drift is real and worth resisting on re-reading. If a section feels like it lets the substrate question off the hook, it probably does.
-
-**§13.5 What this does not do (as of v0.5.0):**
-
-> Stated explicitly, because §0's drift warning applies most sharply here:
->
-> - It does **not** bring Class C problems into scope. Factual truth, honesty, intent-alignment, and open-world OOD remain outside UNTRUST (§10). They are named here only to locate the boundary, with the reason for exclusion (reference-dependence) now stated.
-> - It does **not** claim UNTRUST is a "trustworthy AI" document. UNTRUST addresses substrate trust — one property in Class A. The categorisation shows precisely how narrow that is: one cell of one row.
-> - It does **not** soften the §2 criterion. It adds the precondition behind it, which makes the criterion more discriminating, not less.
->
-> The contribution of this section is a sharper edge, not a wider remit.
+- **Re-checked against arXiv (2026-05-28).** The recent and higher-risk references were confirmed to exist with matching titles and authors — including the 2026-dated CUA [16], Constitutional Classifiers++ [29], and Boundary Point Jailbreaking [30] (which does defeat both Constitutional Classifiers and a GPT-5 input classifier), plus IBProtector [26], SecurityLingua [27], the hallucination results [17][19], and the 86% → 4.4% Constitutional Classifiers figure [28]. This pass also **corrected a factual error**: CaMeL [5] solves 77% of AgentDojo tasks with provable security (vs. 84% undefended) — earlier versions misstated it as "~67% mitigation."
+- **Recognised from the literature, not individually re-pulled this pass.** The remaining well-known references match published work but were not each re-fetched; a few in-paper figures (e.g. [16]'s 1.43% PPL) are reported from the papers rather than line-checked.
+- **Author's framing, not from any single source.** The four-sketch taxonomy, the trusted-base synthesis (§10), the five-field cross-disciplinary claim (§11), the three-class enforceability cut (§12), and the four-cluster map (§13) are organizing frames — defensible but not established; whether they are the right cut of the space is open.
+- **The bottom line.** No current approach meets the §2 criterion fully; every existing defence is partial; and only Class A admits an architectural fix at all.
 
 ---
 

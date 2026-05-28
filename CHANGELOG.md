@@ -6,6 +6,16 @@ The document follows strict additive / verbatim-preservation rules — see `CLAU
 
 > _Note: entries reference section numbers as they stood when each entry was written. Pre-v1.0.0 entries use the original numbering; the v1.0.0 refactor renumbered every section — see the old→new map in Appendix B.2.7 of `UNTRUST.md`._
 
+## v2.0.1 — 2026-05-28
+
+Reference-verification and consistency pass. Re-checked the recent and higher-risk references against arXiv — all confirmed real, including the 2026-dated CUA [16], Constitutional Classifiers++ [29], and Boundary Point Jailbreaking [30] (which does defeat both Constitutional Classifiers and a GPT-5 input classifier). **Corrected one factual error**: CaMeL [5] solves 77% of AgentDojo tasks with provable security (vs. 84% undefended), not the "~67% mitigation" earlier versions stated. Filled in author lists for [26][27][29][30] and corrected [30]'s title ("…of Black-Box LLMs"); replaced [29]'s unverified "~40× lower cost" with the reported ~23.7% → ~1% added-compute figure. Consistency fixes: capability-lineage age "50 years" → "60 years" (§7); "decade-old" → "12-year-old" for adversarial examples (§5); defined "verbatim-copy groundedness" (§12); trimmed §13 mapping/per-cluster redundancy. Rewrote "Sources & confidence" to record the verification pass and drop the now-resolved author-list caveat.
+
+## v2.0.0 — 2026-05-28
+
+Readability rewrite, and a change to the editing discipline. Through v1.x the document followed a strict verbatim-preservation / additive-only rule, which over many versions accumulated heavy process scaffolding — per-version "(added vX)" markers, the Appendix B correction trail (B.2.x), the B.6 superseded-text archive, and self-referential "this section reverses §X" prose — that buried the actual ideas. v2.0.0 drops that discipline: the document is now a **living note**, edited freely for clarity, with history kept in this `CHANGELOG.md` rather than inline.
+
+Changes: full prose rewrite for flow (≈125 KB → ≈48 KB); removed all version-journey markers, the verification-log correction trail, and the superseded-text archive; dropped §N.M subsection numbering in favour of descriptive cross-references (top-level §0–§16 retained); replaced Appendix A/B with a clean **References** list and a slim **Sources & confidence** note (preserving the verified-vs-asserted-vs-uncertain distinction). No substantive claim changed — the §2 criterion, the four sketches + Pattern 5, the trusted-base synthesis, the A/B/C enforceability taxonomy, and the Part I / Part II split are all intact. `CLAUDE.md` updated to describe the living-note discipline.
+
 ## v1.0.2 — 2026-05-28
 
 Consistency correction. §0's epistemic-status bullet ("Nobody has built any of them at LLM scale…") contradicted §3's honest repositioning, which has held since v0.2.0 that several sketches have working partial implementations and that the accurate claim is narrower — no current approach is a _complete_ substrate fix (none meets the §2 criterion fully). The v1.0.0 §0 rewrite had carried the stale bullet forward by oversight. Aligned the §0 bullet with §3; no position changed. Logged in B.2.8; the original §0 wording remains archived in B.6.

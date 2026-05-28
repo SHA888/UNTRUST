@@ -4,14 +4,14 @@ LLM trust sorted by what can actually be enforced: substrate fixes (Part I) vs. 
 
 ## What this is
 
-A frame for thinking about LLM trust, organized by enforceability. **Part I — Substrate fix** asks whether trust boundaries can be enforced architecturally rather than statistically: four sketches plus a trusted-base synthesis, with prior-art mapping. A **bridge** (§12) states the enforcement boundary and a three-class taxonomy (A structurally enforceable / B statistically guaranteeable / C mitigation-only). **Part II — Non-substrate fix** maps the wider trustworthy-AI clusters (hallucination, alignment, robustness/OOD) that fall on the non-enforceable side. Backed by a verification log.
+A frame for thinking about LLM trust, organized by enforceability. **Part I — Substrate fix** asks whether trust boundaries can be enforced architecturally rather than statistically: four sketches plus a trusted-base synthesis, with prior-art mapping. A **bridge** (§12) states the enforcement boundary and a three-class taxonomy (A structurally enforceable / B statistically guaranteeable / C mitigation-only). **Part II — Non-substrate fix** maps the wider trustworthy-AI clusters (hallucination, alignment, robustness/OOD) that fall on the non-enforceable side. Backed by a references list and a short sources-and-confidence note.
 
 UNTRUST is not a research program, not a proposal, not a publishable artifact. It's a structured place to hold the substrate question against the gravity of comfortable mitigation answers.
 
 ## Contents
 
-- `UNTRUST.md` — the document itself (_LLM Trust by Enforceability_). Current version 1.0.2.
-- `CHANGELOG.md` — version history (split out of the document header at v1.0.1).
+- `UNTRUST.md` — the document itself (_LLM Trust by Enforceability_). Current version 2.0.1.
+- `CHANGELOG.md` — version history.
 - `README.md` — this file.
 
 ## Reading order
@@ -33,19 +33,19 @@ UNTRUST is not a research program, not a proposal, not a publishable artifact. I
 
 **Part II — Non-substrate fix:**
 
-9. §13 — the wider trustworthy-AI remit: the four problem clusters, their independence, and their map onto §12.2's classes.
+9. §13 — the wider trustworthy-AI clusters: the four problem clusters, their independence, and their map onto §12's classes.
 
-**Back matter:** §14 limits, §15 open questions, §16 notes on use; Appendix A references; Appendix B verification log (including B.6, which archives the pre-v1.0.0 framing).
+**Back matter:** §14 limits, §15 open questions, §16 notes on use; then the References and a short Sources & confidence note.
 
 ## Versioning
 
 Semantic-version-shaped, applied to a thinking document:
 
-- **Patch (0.x.y)** — clarifications, typos, citation fixes, distribution/metadata updates. No substantive content change. Examples: v0.4.1 added Sketch 2 & 3 prior-art citations + verification-log entries; v0.4.2 fixed cross-references, stale dates, and citation linkage (no body-claim change).
-- **Minor (0.y.0)** — additive: new sections, new references, new sketches. Existing content preserved verbatim. Examples: v0.2.0 added prior-art mapping; v0.3.0 added Pattern 5; v0.4.0 added the enforcement-boundary taxonomy (§13); v0.5.0 added the wider-remit map (§14).
-- **Major (x.0.0)** — non-additive structural change (the only version type allowed to break verbatim preservation). v1.0.0 refactored the document into two categories (Part I substrate fix / Part II non-substrate fix), renumbered and reordered every section, and reframed the title, §0, and §12.5; the superseded text is archived in B.6.
+- **Patch (x.y.Z)** — typos, link fixes, small clarifications.
+- **Minor (x.Y.0)** — new material: a section, references, or a sketch.
+- **Major (X.0.0)** — restructure, retitle, scope change, or a change to the editing discipline. v1.0.0 refactored into Part I / Part II; v2.0.0 rewrote the document as a clean note and dropped the earlier verbatim-preservation discipline (the per-version markers and correction trail that had buried the ideas).
 
-All updates are surgical. Existing content is preserved verbatim across versions; corrections go in the verification log so re-reading old sections doesn't require remembering what changed. Full version history is in `CHANGELOG.md`.
+Full version history is in `CHANGELOG.md`.
 
 ## Scope
 
@@ -53,13 +53,13 @@ All updates are surgical. Existing content is preserved verbatim across versions
 
 **What UNTRUST does NOT address**:
 
-- A substrate fix for Part II. The non-substrate clusters are mapped and classified, never claimed as architecturally enforceable; the §2 line and the clusters' independence (§13.2) hold. (v0.4.0's framing declined even to discuss them; v1.0.0 reversed that — see B.2.6 / B.2.7.)
+- A substrate fix for Part II. The non-substrate clusters are mapped and classified, never claimed as architecturally enforceable; the §2 line and the clusters' independence hold.
 - Deceived principals, side channels, supply chain, multi-agent dynamics, computational cost — see §14.
 - Specific deployment recipes — this is structural, not operational.
 
 ## Distribution
 
-Publicly visible as a working draft (v1.0.2+). The codename UNTRUST is a working identifier, not branding — it names the load-bearing commitment (the neural component is treated as structurally untrusted by design) and is not intended for product, marketing, or external naming use. If any of the sketches becomes the basis for actual implementation work, that work gets its own scope, license, and naming — separate from this document.
+Publicly visible as a working draft (v2.0.1+). The codename UNTRUST is a working identifier, not branding — it names the load-bearing commitment (the neural component is treated as structurally untrusted by design) and is not intended for product, marketing, or external naming use. If any of the sketches becomes the basis for actual implementation work, that work gets its own scope, license, and naming — separate from this document.
 
 ## License
 
