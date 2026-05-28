@@ -19,7 +19,7 @@ The document follows strict versioning rules that override default "improve as y
 
 ### Versioning semantics
 
-- **Patch (0.x.y)** — typos, citation URL fixes, formatting, metadata, cross-reference/citation-linkage corrections. No content claims change. Examples: v0.3.1 (distribution metadata); v0.4.1 (prior-art citations [24]–[32] added via the appendix, body verbatim); v0.4.2 (cross-reference, stale-date, and citation-linkage fixes); v1.0.1 (changelog split out to `CHANGELOG.md`).
+- **Patch (0.x.y)** — typos, citation URL fixes, formatting, metadata, cross-reference/citation-linkage corrections. No content claims change. Examples: v0.3.1 (distribution metadata); v0.4.1 (prior-art citations [24]–[32] added via the appendix, body verbatim); v0.4.2 (cross-reference, stale-date, and citation-linkage fixes); v1.0.1 (changelog split out to `CHANGELOG.md`); v1.0.2 (§0/§3 consistency correction).
 - **Minor (0.y.0)** — new sections, new references, new sketches. Body content preserved verbatim. Examples: v0.2.0 added §0.5 (now §3) + Appendix A/B; v0.3.0 added §0.6 (now §8) + reference [16]; v0.4.0 added §13 (now §12) + references [17]–[23]; v0.5.0 added §14 (now §13) + references [33]–[35].
 - **Major (x.0.0)** — the only bump allowed to break verbatim preservation (renumber, reorder, rewrite framing). v1.0.0 refactored into Part I (substrate fix) / Part II (non-substrate fix), renumbered every section, and reframed the title/§0/§12.5 (superseded text in B.6). A future major bump may mark the document committing to a defensible position; v1.0.0 records a structural commitment, not that milestone.
 

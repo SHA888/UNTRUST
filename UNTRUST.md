@@ -2,7 +2,7 @@
 
 **Codename: UNTRUST**
 **Substrate fixes vs. non-substrate fixes, sorted by what can actually be enforced. Working draft.**
-**Version: 1.0.1** (2026-05-28)
+**Version: 1.0.2** (2026-05-28)
 
 > The codename names the load-bearing commitment: the neural component is treated as structurally untrusted by design. UNTRUST is a working identifier, not a brand — the document is publicly visible as a working draft, but the name is not intended for product, marketing, or external naming use.
 
@@ -14,7 +14,7 @@
 
 - This document sorts LLM trust problems by **what can be enforced**, into two categories. **Part I — Substrate fix** is the original UNTRUST argument: the narrow class of trust properties an architecture can enforce so that no within-distribution input can defeat them. **Part II — Non-substrate fix** is the wider "trustworthy AI" remit — hallucination, alignment, robustness/OOD — where only mitigations or statistical guarantees exist. The §12 bridge (the enforcement boundary) is what separates the two.
 - The Part I material is **sketches**, not architectures. They are first-pass structural ideas, not implementations or even specifications.
-- **Nobody has built any of them** at LLM scale. Some have partial precedents in narrow domains.
+- **No current approach is a complete substrate fix at LLM scale.** Several of the sketches have working partial implementations (e.g. ASIDE, StruQ, CaMeL — see §3) that achieve real-but-incomplete robustness gains without meeting the §2 criterion fully. (The original v0.1.0 framing — "nobody has built any of them" — was substantively wrong; §3 carries the honest repositioning.)
 - Each sketch has **at least one unsolved hard problem**. None is complete.
 - The synthesis (§9–§10) is **more speculative** than the individual sketches. Treat it as a hypothesis about where the answer might live, not a claim to have found it.
 - Part II being **in scope does not make it substrate-fixable**. Bringing those clusters into the document maps and classifies them honestly; it does not claim an architectural fix for any of them. The §2 criterion still sorts the two categories — it was not softened to admit Part II.
@@ -981,6 +981,10 @@ Old → new section map:
 | §12   | §16  | Notes on use                                  |
 
 Subsection minor numbers are unchanged (e.g. old §13.2 → §12.2; old §14.3 → §13.3; old §3.4 → §4.4).
+
+### B.2.8 §0 / §3 consistency correction (v1.0.2)
+
+§0's epistemic-status bullet still read "Nobody has built any of them at LLM scale. Some have partial precedents in narrow domains" — a v0.1.0 claim that §3's honest repositioning (added v0.2.0) had already called "substantively wrong." The v1.0.0 §0 rewrite carried the stale bullet forward by oversight. v1.0.2 aligns the bullet with §3: several sketches have working partial implementations (ASIDE, StruQ, CaMeL) at LLM scale, and the accurate claim is that no current approach is a _complete_ substrate fix (none meets the §2 criterion fully). No position changed — this removes a self-contradiction; §3 has held the corrected view since v0.2.0. The original §0 wording remains archived verbatim in B.6.
 
 ### B.3 Claims that remain unverified or uncertain
 

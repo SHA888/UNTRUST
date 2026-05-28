@@ -6,6 +6,10 @@ The document follows strict additive / verbatim-preservation rules — see `CLAU
 
 > _Note: entries reference section numbers as they stood when each entry was written. Pre-v1.0.0 entries use the original numbering; the v1.0.0 refactor renumbered every section — see the old→new map in Appendix B.2.7 of `UNTRUST.md`._
 
+## v1.0.2 — 2026-05-28
+
+Consistency correction. §0's epistemic-status bullet ("Nobody has built any of them at LLM scale…") contradicted §3's honest repositioning, which has held since v0.2.0 that several sketches have working partial implementations and that the accurate claim is narrower — no current approach is a _complete_ substrate fix (none meets the §2 criterion fully). The v1.0.0 §0 rewrite had carried the stale bullet forward by oversight. Aligned the §0 bullet with §3; no position changed. Logged in B.2.8; the original §0 wording remains archived in B.6.
+
 ## v1.0.1 — 2026-05-28
 
 Split the version history out of the `UNTRUST.md` header into this dedicated `CHANGELOG.md`. Organizational/metadata change only — no content claims, sections, references, or numbering changed. The document header now carries a one-line pointer here, and the per-version entries below are preserved verbatim from the header.

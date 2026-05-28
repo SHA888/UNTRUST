@@ -10,7 +10,7 @@ UNTRUST is not a research program, not a proposal, not a publishable artifact. I
 
 ## Contents
 
-- `UNTRUST.md` — the document itself (_LLM Trust by Enforceability_). Current version 1.0.1.
+- `UNTRUST.md` — the document itself (_LLM Trust by Enforceability_). Current version 1.0.2.
 - `CHANGELOG.md` — version history (split out of the document header at v1.0.1).
 - `README.md` — this file.
 
@@ -59,7 +59,7 @@ All updates are surgical. Existing content is preserved verbatim across versions
 
 ## Distribution
 
-Publicly visible as a working draft (v1.0.1+). The codename UNTRUST is a working identifier, not branding — it names the load-bearing commitment (the neural component is treated as structurally untrusted by design) and is not intended for product, marketing, or external naming use. If any of the sketches becomes the basis for actual implementation work, that work gets its own scope, license, and naming — separate from this document.
+Publicly visible as a working draft (v1.0.2+). The codename UNTRUST is a working identifier, not branding — it names the load-bearing commitment (the neural component is treated as structurally untrusted by design) and is not intended for product, marketing, or external naming use. If any of the sketches becomes the basis for actual implementation work, that work gets its own scope, license, and naming — separate from this document.
 
 ## License
 
