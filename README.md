@@ -10,7 +10,8 @@ UNTRUST is not a research program, not a proposal, not a publishable artifact. I
 
 ## Contents
 
-- `UNTRUST.md` — the document itself (_LLM Trust by Enforceability_). Current version 1.0.0.
+- `UNTRUST.md` — the document itself (_LLM Trust by Enforceability_). Current version 1.0.1.
+- `CHANGELOG.md` — version history (split out of the document header at v1.0.1).
 - `README.md` — this file.
 
 ## Reading order
@@ -44,7 +45,7 @@ Semantic-version-shaped, applied to a thinking document:
 - **Minor (0.y.0)** — additive: new sections, new references, new sketches. Existing content preserved verbatim. Examples: v0.2.0 added prior-art mapping; v0.3.0 added Pattern 5; v0.4.0 added the enforcement-boundary taxonomy (§13); v0.5.0 added the wider-remit map (§14).
 - **Major (x.0.0)** — non-additive structural change (the only version type allowed to break verbatim preservation). v1.0.0 refactored the document into two categories (Part I substrate fix / Part II non-substrate fix), renumbered and reordered every section, and reframed the title, §0, and §12.5; the superseded text is archived in B.6.
 
-All updates are surgical. Existing content is preserved verbatim across versions; corrections go in the verification log so re-reading old sections doesn't require remembering what changed.
+All updates are surgical. Existing content is preserved verbatim across versions; corrections go in the verification log so re-reading old sections doesn't require remembering what changed. Full version history is in `CHANGELOG.md`.
 
 ## Scope
 
@@ -58,7 +59,7 @@ All updates are surgical. Existing content is preserved verbatim across versions
 
 ## Distribution
 
-Publicly visible as a working draft (v1.0.0+). The codename UNTRUST is a working identifier, not branding — it names the load-bearing commitment (the neural component is treated as structurally untrusted by design) and is not intended for product, marketing, or external naming use. If any of the sketches becomes the basis for actual implementation work, that work gets its own scope, license, and naming — separate from this document.
+Publicly visible as a working draft (v1.0.1+). The codename UNTRUST is a working identifier, not branding — it names the load-bearing commitment (the neural component is treated as structurally untrusted by design) and is not intended for product, marketing, or external naming use. If any of the sketches becomes the basis for actual implementation work, that work gets its own scope, license, and naming — separate from this document.
 
 ## License
 

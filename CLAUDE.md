@@ -19,11 +19,11 @@ The document follows strict versioning rules that override default "improve as y
 
 ### Versioning semantics
 
-- **Patch (0.x.y)** — typos, citation URL fixes, formatting, metadata, cross-reference/citation-linkage corrections. No content claims change. Examples: v0.3.1 (distribution metadata); v0.4.1 (prior-art citations [24]–[32] added via the appendix, body verbatim); v0.4.2 (cross-reference, stale-date, and citation-linkage fixes).
+- **Patch (0.x.y)** — typos, citation URL fixes, formatting, metadata, cross-reference/citation-linkage corrections. No content claims change. Examples: v0.3.1 (distribution metadata); v0.4.1 (prior-art citations [24]–[32] added via the appendix, body verbatim); v0.4.2 (cross-reference, stale-date, and citation-linkage fixes); v1.0.1 (changelog split out to `CHANGELOG.md`).
 - **Minor (0.y.0)** — new sections, new references, new sketches. Body content preserved verbatim. Examples: v0.2.0 added §0.5 (now §3) + Appendix A/B; v0.3.0 added §0.6 (now §8) + reference [16]; v0.4.0 added §13 (now §12) + references [17]–[23]; v0.5.0 added §14 (now §13) + references [33]–[35].
 - **Major (x.0.0)** — the only bump allowed to break verbatim preservation (renumber, reorder, rewrite framing). v1.0.0 refactored into Part I (substrate fix) / Part II (non-substrate fix), renumbered every section, and reframed the title/§0/§12.5 (superseded text in B.6). A future major bump may mark the document committing to a defensible position; v1.0.0 records a structural commitment, not that milestone.
 
-Bump the version in the document header AND record the change in the changelog block immediately under the title. Do not silently edit.
+Bump the version in the document header AND add an entry to `CHANGELOG.md` (the version ledger, split out of the document header at v1.0.1). The header keeps only a pointer to `CHANGELOG.md`. Do not silently edit.
 
 ## Substance (so you don't have to re-read ~125 KB)
 
@@ -68,7 +68,7 @@ If adding a new pattern, sketch, or analysis section (a minor version bump):
 2. Mirror the existing sketch structure where applicable: mechanism, cost, hard problem, what it gets right, what it does not solve.
 3. Add inline citations `[N]` for any claim about prior art, with the reference appended to Appendix A.
 4. Add a Verification log entry in Appendix B (B.1 for verified, B.3 for unverified, B.2.x for corrections).
-5. Add the changelog block under the document title summarizing what changed and what was preserved.
+5. Add a `CHANGELOG.md` entry summarizing what changed and what was preserved.
 
 **Do not include `Co-Authored-By:` trailers in commit messages.** This applies to all assistant-generated commits, including those produced by Claude Code or any other AI tool. Commit attribution stays with the human author. Boilerplate trailers add noise to the history without conveying meaningful authorship and have been retroactively stripped from past commits.
 
