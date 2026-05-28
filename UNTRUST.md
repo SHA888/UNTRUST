@@ -2,13 +2,15 @@
 
 **Codename: UNTRUST**
 **Four sketches and a synthesis. Working draft. Not designs.**
-**Version: 0.3.0** (2026-05-27)
+**Version: 0.3.1** (2026-05-28)
 
-> The codename names the load-bearing commitment: the neural component is treated as structurally untrusted by design. The name is for internal reference and searchability only — not for publishing, marketing, or external use.
+> The codename names the load-bearing commitment: the neural component is treated as structurally untrusted by design. UNTRUST is a working identifier, not a brand — the document is publicly visible as a working draft, but the name is not intended for product, marketing, or external naming use.
 
 > **v0.2.0 changelog**: Added §0.5 (prior art and precedent), inline citations throughout, Appendix A (references), and Appendix B (verification log). Body sketches §1–§12 preserved verbatim from v0.1.0. The verification pass identified significant prior art — particularly CaMeL, ASIDE, StruQ — that the original document treated as more speculative than warranted. The honest repositioning is in §0.5.
 
 > **v0.3.0 changelog**: Added §0.6 — a fifth enforcement pattern (parameterisation-class restriction) identified from adjacent work on constrained-operator adapters. The pattern is taxonomically distinct from the four sketches and was missed in v0.1.0/v0.2.0. Added reference [16] and Appendix B.3 entry. Body sketches §1–§12 and §0.5 preserved verbatim. No claim that this pattern addresses trust — see caveats in §0.6.
+
+> **v0.3.1 changelog**: Distribution status update — the working draft is now publicly visible. Body sketches §1–§12, §0.5, and §0.6 preserved verbatim. The only text changes are the front-matter blockquote above (rewording the codename note to reflect the new status) and a log entry in Appendix B.2.2. No content claims change; this is a metadata patch.
 
 ---
 
@@ -656,6 +658,12 @@ This appendix documents what was verified, what was corrected, and what remains 
 | Enforcement taxonomy in §1–§7 enumerates four patterns; missed a fifth (parameterisation-class restriction) demonstrated in the orthogonal/unitary NN literature since 2016 | Added §0.6 documenting Pattern 5, with explicit caveats that it is demonstrated for narrow mathematical properties only, not trust |
 | CUA paper (Aizpurua et al. 2026) surfaced during review as recent LLM-scale instance | Cited as [16] with conflict-of-interest disclosure (Multiverse Computing's own CompactifAI is the degraded baseline in the paper's SmolLM2 recovery framing); foundational orthogonal-parameterisation lineage cited separately |
 | Risk of overclaiming that Pattern 5 addresses trust | Explicit non-claim block in §0.6 listing what the pattern does NOT mean for trust; open question framed as "does any trust-relevant property admit closed-form manifold restriction?" — not asserted as answerable |
+
+### B.2.2 Updates in v0.3.1
+
+| Change | Resolution |
+|---|---|
+| Distribution status changed from "internal reference only" to "publicly visible working draft" | Reworded the front-matter blockquote following the version line. No content claims change. The codename is still a working identifier, not branding — clarified that the name is not intended for product/marketing/external naming use even though the document itself is now readable. README's Distribution and License sections updated correspondingly outside the document. |
 
 ### B.3 Claims that remain unverified or uncertain
 

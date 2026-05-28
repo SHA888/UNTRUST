@@ -50,9 +50,9 @@ The document opens with a warning that "the conversation that produced this drif
 
 ## Distribution constraints
 
-- Codename **UNTRUST** is for internal reference and searchability only. Not for publishing, marketing, external sharing, or product naming.
-- No license is specified; treat as private working material. A license decision precedes any further distribution.
-- If implementation work spins out from a sketch, it gets its own repo, scope, and naming — separate from this document.
+- The repo is **publicly visible** as a working draft. The codename **UNTRUST** is a working identifier, not branding — it names the load-bearing commitment, not a product. Do not use the name in marketing copy or as a project label outside this document.
+- **No license is specified; all rights reserved by default.** Treat as readable working material. Do not assume permission for reuse, redistribution, or derivative work — explicit consent is required.
+- If implementation work spins out from a sketch, it gets its own repo, scope, license, and naming — separate from this document.
 
 ## Adding a new section
 

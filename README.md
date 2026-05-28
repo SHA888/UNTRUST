@@ -1,6 +1,6 @@
 # UNTRUST
 
-Substrate architecture sketches for LLM trust boundaries. Working draft, internal reference only.
+Substrate architecture sketches for LLM trust boundaries. Working draft, publicly visible.
 
 ## What this is
 
@@ -51,8 +51,8 @@ All updates are surgical. Existing content is preserved verbatim across versions
 
 ## Distribution
 
-Internal reference. The codename UNTRUST is for searchability, not branding. Not for publishing, external sharing, or product naming. If any of the sketches becomes the basis for actual implementation work, that work needs its own scope, license, and naming — separate from this document.
+Publicly visible as a working draft. The codename UNTRUST is a working identifier, not branding — it names the load-bearing commitment (the neural component is treated as structurally untrusted) and is not intended for product, marketing, or external naming use. If any of the sketches becomes the basis for actual implementation work, that work gets its own scope, license, and naming — separate from this document.
 
 ## License
 
-None specified. Document is private working material. If status changes, license decision precedes any further distribution per standard discipline.
+None specified; all rights reserved by default. The document is readable as a working draft. Reuse, redistribution, or derivative work requires explicit permission. A license decision will be made before any change that would meaningfully expand permitted use.
