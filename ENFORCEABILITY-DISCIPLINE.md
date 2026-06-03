@@ -1,14 +1,16 @@
 # The Enforceability Discipline
 
-**A conformance contract for AI trust claims.**
+**A labeling discipline for AI trust claims — a lens, not an enforcer.**
 **Companion to *LLM Trust by Enforceability* (UNTRUST). Working draft.**
-**Version: 0.3.0** (2026-06-04)
+**Version: 0.4.0** (2026-06-04)
 
-> This document externalizes one part of UNTRUST — the §12 enforceability cut — and turns it
-> from a description into a discipline: a contract that any trust *claim* (a paper, a product, an
-> eval, a filing) must honor to keep the substrate-fix / non-substrate-fix line intact.
-> It is descriptive, not promotional. It does not argue anyone should adopt it; it states what
-> faithfulness to the separation requires, so that departures are visible as departures.
+> This document externalizes one part of UNTRUST — the §12 enforceability cut — as a *lens* any
+> trust *claim* (a paper, a product, an eval, a filing) can be read through, so departures from the
+> substrate-fix / non-substrate-fix line are visible as departures. **It binds nothing.** Unadopted,
+> this discipline is itself **Class C** by UNTRUST's own §2 criterion — any actor can decline it —
+> exactly as UNTRUST §16 now states from the parent side. Calling it a "discipline" (earlier drafts
+> said "contract") names a practice you can choose to follow, not an authority that constrains you.
+> Its function is to make drift *legible*, never to prevent it.
 
 > **Relationship to UNTRUST.** The argument here is a sharpening of UNTRUST §12, not a new result.
 > Where this document and UNTRUST disagree, UNTRUST §12 is the source of record until reconciled.
@@ -17,10 +19,12 @@
 
 ## 0. Epistemic status
 
-This is a **working draft of a discipline**, not a standard anyone has ratified. It inherits
-UNTRUST's anti-pitch posture (§16): a conformance framework marketed as "the standard for
-trustworthy AI" would invite exactly the overclaim it exists to prevent. So read it as a contract
-proposal to be interrogated, broken, and repaired — not adopted.
+This is a **working draft of a discipline**, not a standard anyone has ratified — and by its own
+logic it could not become a binding one merely by being written. It inherits UNTRUST's anti-pitch
+posture (§16): a conformance framework marketed as "the standard for trustworthy AI" would invite
+exactly the overclaim it exists to prevent — and would itself be the Class-C-sold-as-A move it
+polices. So read it as a lens to be interrogated, broken, and repaired — not a contract that
+constrains anyone.
 
 Two standing cautions, both carried from UNTRUST:
 
@@ -29,7 +33,7 @@ Two standing cautions, both carried from UNTRUST:
   incentive gradient points at overclaim (UNTRUST §16). This discipline exists because that
   relocation, left ungoverned, erodes the line — not because the line is hard to *state*.
 - **Distrust the comfortable reading.** If a clause here seems to let a mitigation pass as a fix,
-  that is the drift UNTRUST §0 names. The contract is written to make the drift *visible*, not to
+  that is the drift UNTRUST §0 names. The discipline is written to make the drift *visible*, not to
   make anyone feel safe.
 
 ---
@@ -55,7 +59,7 @@ A sharper form of the same point: even with the property *and* the mechanism bot
 can still vary by **input slice**. A constrained decoder enforces schema conformance with Class A
 certainty on every *completed* call, yet delivers only Class B coverage *over a call distribution*
 where some inputs truncate before the schema closes. Class is a function of property, mechanism,
-**and the slice of inputs the claim ranges over** — which is why the contract must be able to state
+**and the slice of inputs the claim ranges over** — which is why the discipline must be able to state
 more than one class for one property (R6, B4).
 
 ## A2. The three classes, and where each bottoms out
@@ -100,23 +104,30 @@ three are *claim* failures, which is why a discipline at the claim layer can gov
    The boundary is preserved only by *what the verifier is pointed at* — precisely the variable
    product evolution erodes.
 
-## A4. Why a paper alone cannot hold the line
+## A4. Why the discipline is not redundant with the paper
 
-A paper makes the separation *legible*; it does not make it *binding*. The field cites the exciting
-part (UNTRUST §10, an architecture) and drops the disciplinary part (§12, a constraint) — selective
-citation is the default, and §16 is the document's own statement that the incentive gradient routes
-around the unglamorous half. A normative contract is therefore not redundant with the paper: the
-paper supplies the *why*, without which the contract is arbitrary; the contract supplies the *teeth*,
-without which the paper is inert. They are one artifact with two jobs.
+A paper makes the separation *legible*; the discipline makes it *applicable*. **Neither binds** —
+that is the §16 lesson, and pretending otherwise is the move this document exists to catch. The
+field cites the exciting part (UNTRUST §10, an architecture) and drops the disciplinary part (§12, a
+constraint); selective citation is the default, and §16 is the document's own statement that the
+incentive gradient routes around the unglamorous half. So the discipline's job is not *teeth* — it
+has none — but *operationalization*: it turns the distinction from something stated into something
+you can *run*, claim by claim, so drift is detectable case-by-case rather than only describable in
+the abstract. The paper supplies the *why*, without which the checklist is arbitrary; the discipline
+supplies the *how-to-apply*, without which the paper stays a generality. Two jobs, one artifact, and
+neither job is enforcement.
 
 ---
 
 # Part B — The discipline
 
-## B1. The labeling contract
+## B1. The labeling schema
 
-Any trust claim — in a paper, a product page, an eval card, a regulatory filing — is **conformant**
-only if it declares, for each protected property, all four fields:
+"Conformant" below is a *descriptive* verdict, not an enforced gate: there is no authority and
+nothing is blocked. "Non-conformant" means only *you can now see the omission* — the discipline
+reads a claim, it does not stop one. With that understood: a trust claim — in a paper, a product
+page, an eval card, a regulatory filing — is **conformant** only if it declares, for each protected
+property, all four fields:
 
 | Field | Question it answers | Why it is required |
 | ----- | ------------------- | ------------------ |
@@ -193,7 +204,7 @@ altitude.
 
 ## B5. Worked classifications
 
-The contract earns its keep only if it discriminates. Applied to the tools UNTRUST's frame implies:
+The discipline earns its keep only if it discriminates. Applied to the tools UNTRUST's frame implies:
 
 | Claim | Property (R1) | Class (B4) | Seam(s) (B1) | Out-of-scope (B1) |
 | ----- | ------------- | ---------- | --------- | ----------------- |
@@ -221,19 +232,27 @@ closes.
 
 - It does **not** make any Class C property enforceable. It makes the *claim about* a Class C
   property honest. Hallucination, intent-alignment, and open-world OOD remain unfixed (UNTRUST §13);
-  this contract only stops them being sold as fixed.
+  this discipline only makes them *legible* when sold as fixed — it cannot stop the sale.
 - It does **not** verify that a stated classification is *correct* — only that one is *stated*, with
   its seam and scope. A claim can be conformant (all fields present) and still mis-class its property.
-  Catching mis-classification is review work the contract structures but does not perform.
+  Catching mis-classification is review work the discipline structures but does not perform.
 - It does **not** bind anyone. Absent adoption, its only function is to make departures from the
-  separation legible as departures. That is deliberately all it claims.
+  separation legible as departures. That is deliberately all it claims. UNTRUST §16 states this from
+  the parent side — a voluntary reification of the enforceability classes is Class C until something
+  external (adoption, contract, audit, law) enforces it — and this document is that reification,
+  and accepts the label.
 
 ## Sources & confidence
 
 - **Derived, not new.** Part A is a sharpening of UNTRUST §12; the three classes, the three seams
   (labeling / autoformalisation / source-trust), and the "claims, not code" finding are all from
   UNTRUST (§12, and the analysis preceding this draft). This document's contribution is the
-  *contract form* (Part B), not the classification.
+  *discipline form* (Part B), not the classification.
+- **Reframed in v0.4.0 to drop the binding pretence.** Earlier drafts called this a "conformance
+  contract." UNTRUST §16 — itself prompted by this document's "binds nobody" admission — establishes
+  that a voluntary reification of the classes is Class C, not a fix. The honesty pass aligns the
+  framing (title, §0, B1) with that: the rules and scorecard are unchanged, but they describe an
+  *honest disclosure*, not an *enforced gate*.
 - **Author's framing.** The four-field claim schema (B1), the seven conformance rules (B2), the
   conditional-and-coverage *triple* scorecard (B4), and the A/B-avg/B-wc/C split (A2) are organizing
   proposals — defensible, unratified, and the right first thing to interrogate.
