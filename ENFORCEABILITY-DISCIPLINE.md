@@ -2,7 +2,7 @@
 
 **A conformance contract for AI trust claims.**
 **Companion to *LLM Trust by Enforceability* (UNTRUST). Working draft.**
-**Version: 0.1.0** (2026-06-04)
+**Version: 0.2.0** (2026-06-04)
 
 > This document externalizes one part of UNTRUST — the §12 enforceability cut — and turns it
 > from a description into a discipline: a contract that any trust *claim* (a paper, a product, an
@@ -50,6 +50,13 @@ prose). The same decoder pointed at *semantic appropriateness* is Class C (the p
 expressible to it). Nothing in the code changed; the *claim* did. This is why the separation cannot
 be protected by building the right mechanism — it can only be protected by disciplining the *claim*
 the mechanism is allowed to make.
+
+A sharper form of the same point: even with the property *and* the mechanism both fixed, the class
+can still vary by **input slice**. A constrained decoder enforces schema conformance with Class A
+certainty on every *completed* call, yet delivers only Class B coverage *over a call distribution*
+where some inputs truncate before the schema closes. Class is a function of property, mechanism,
+**and the slice of inputs the claim ranges over** — which is why the contract must be able to state
+more than one class for one property (R6, B4).
 
 ## A2. The three classes, and where each bottoms out
 
@@ -108,8 +115,8 @@ only if it declares, for each protected property, all four fields:
 | Field | Question it answers | Why it is required |
 | ----- | ------------------- | ------------------ |
 | **Property** | What exactly is protected? Stated as a checkable proposition, not a vibe. | "Safe" and "trustworthy" are not properties. "No tool executes without an orchestrator-minted capability" is. |
-| **Class** | A, B, or C — *with its conditional*, never bare. | A flat "Class A" hides the conditions under which it degrades (see B4). |
-| **Seam** | Where does enforcement hand off to assumption? | Blocks the marketing gradient (A3.1): a claim that names its seam cannot present the core as covering it. |
+| **Class** | A, B, or C — *with its conditional and coverage*, never bare; stated **per input-slice** when it varies (R6). | A flat "Class A" hides the conditions under which it degrades, and hides the slices on which it degrades to B/C (see B4, R6). |
+| **Seam(s)** | Where does enforcement hand off to assumption? List *all* of them — real tools have seam stacks (e.g. a schema's fidelity *and* the decoder's correctness). | Blocks the marketing gradient (A3.1): a claim that names its seams cannot present the enforced core as covering them. |
 | **Out-of-scope** | What adjacent property does this *not* enforce? | Blocks scope creep (A3.3) by fixing the pointer in writing. |
 
 A claim missing any field is **non-conformant by omission** — and omission is the normal failure
@@ -130,6 +137,11 @@ mode, not lying.
 - **R5 — Pointing is fixed in writing.** Extending a mechanism to a new property requires a new
   claim with its own classification. A verifier re-pointed from syntax to semantics is a new claim,
   not the old one with a wider scope. (Blocks scope creep.)
+- **R6 — Class is stated per input-slice when it varies.** If one property is Class A on one slice of
+  inputs and Class B/C on another — e.g. schema conformance: A *per completed call*, B *over a call
+  distribution* where some inputs truncate — both classes are stated, each with its slice. A single
+  bare class for a slice-varying property is non-conformant; it is the flattening B4 warns against,
+  one level down.
 
 ## B3. Failure modes → blocking clauses
 
@@ -141,39 +153,48 @@ mode, not lying.
 
 ## B4. The scorecard — and the flattening it must resist
 
-A conformance scorecard is the natural tool, but it has its own failure mode, raised against this
-very framework: a near-binary A/B/C tag **flattens §12's conditional edges**. Sketch 3 is Class A
-*conditional on formalisation*; OOD is Class B *bounded* / Class C *open*. A scorecard that prints
-"A" and stops has lost the conditional — which is itself a marketing-gradient failure one level up.
+A conformance scorecard is the natural tool, but it has two failure modes, both raised against this
+very framework. First: a near-binary A/B/C tag **flattens §12's conditional edges** — Sketch 3 is
+Class A *conditional on formalisation*, OOD is Class B *bounded* / Class C *open* — so a scorecard
+that prints "A" and stops has lost the conditional, itself a marketing-gradient failure one level up.
+Second, and subtler: a *condition* can hide a whole *distribution*. "Given completion" reads as a
+binary precondition but is really a coverage figure — the fraction of inputs that complete — so a
+two-field `(letter, condition)` pair re-commits the flattening it was meant to cure, one level down.
 
-So the scorecard is **conditional-preserving by construction**: the class field is a *pair*, never a
-scalar.
+So the scorecard is **conditional- and coverage-preserving by construction**: the class field is a
+*triple*, never a scalar or a pair.
 
 ```
-class := (letter, condition)
-   e.g.  (A, "given correct labeling")
-         (A, "given a faithful formalisation")
-         (B, "given exchangeability / bounded known shift")
-         (C, —)                       // C carries no condition; that is the point
+class := (letter, condition, coverage)
+   e.g.  (A, "given correct labeling",              —)    // intrinsic wherever the condition holds
+         (A, "per completed call",                  —)
+         (B, "over the call distribution",   "Pr[completion] under the input mix")
+         (B, "given exchangeability / bounded shift", "marginal coverage 1−α")
+         (C, —,                                      —)    // C carries no condition; that is the point
 ```
 
-A scorecard cell that reads `A` is non-conformant. A cell that reads `A | correct labeling` is
-conformant. The condition *is* the seam from B1, surfaced at scorecard altitude.
+A scorecard cell that reads `A` is non-conformant. `A | given correct labeling | —` is conformant;
+so is a slice-paired entry — `A per completed call · B over the call distribution` (R6). The
+condition *is* the seam from B1; the coverage *is* the slice from R6 — both surfaced at scorecard
+altitude.
 
 ## B5. Worked classifications
 
 The contract earns its keep only if it discriminates. Applied to the tools UNTRUST's frame implies:
 
-| Claim | Property (R1) | Class (B4) | Seam (B1) | Out-of-scope (B1) |
+| Claim | Property (R1) | Class (B4) | Seam(s) (B1) | Out-of-scope (B1) |
 | ----- | ------------- | ---------- | --------- | ----------------- |
-| Capability-gated agent runtime | No tool call executes without an orchestrator-minted, scoped, unexpired capability | `(A, given the minting policy is correct)` | Capability-minting decision (coercion-through-language, UNTRUST §7) | Whether the *requested* action is wise; intent-alignment |
-| Groundedness enforcer | Every rendered factual span verbatim-copies a provenance-tagged source | `(A, given the source is vouched)` | Source-trust | **Truth** of the claim (Class C — must be stated, R4) |
-| Constrained decoder (syntactic) | Output conforms to grammar G | `(A, unconditional for syntax)` | None for syntax; G's adequacy for the task is out of scope | Semantic appropriateness, factuality |
-| Guardrail classifier | Flags policy-violating I/O | `(C, —)` | Everything (neural, attackable — UNTRUST §3, [30]) | Any worst-case guarantee |
-| Conformal predictor | Marginal coverage at level 1−α | `(B, given exchangeability)` | The exchangeability assumption | Conditional coverage; behavior under shift |
+| Capability-gated agent runtime | No tool call executes without an orchestrator-minted, scoped, unexpired capability | `(A, given the minting policy is correct, —)` | Capability-minting decision (coercion-through-language, UNTRUST §7) | Whether the *requested* action is wise; intent-alignment |
+| Groundedness enforcer | Every rendered factual span verbatim-copies a provenance-tagged source | `(A, given the source is vouched, —)` | Source-trust | **Truth** of the claim (Class C — must be stated, R4) |
+| Constrained decoder (syntactic) | Output conforms to grammar G | `(A, per completed call, —) · (B, over the call distribution, Pr[completion])` | G's adequacy (autoformalisation) **and** the decoder's correctness; truncation/refusal are the completion boundary | Semantic appropriateness, factuality |
+| OpenAI Structured Outputs (`strict` JSON schema) | Output, *when it completes*, parses and conforms to the schema | `(A, per completed call, —) · (B, over the call distribution, Pr[no truncation ∧ no refusal])` | Seam stack: schema fidelity (autoformalisation) + decoder correctness; truncation/refusal mark the completion boundary | Value-correctness; that the schema is the *right* schema; the vendor's word "guarantee" read as semantic |
+| Guardrail classifier | Flags policy-violating I/O | `(C, —, —)` | Everything (neural, attackable — UNTRUST §3, [30]) | Any worst-case guarantee |
+| Conformal predictor | Marginal coverage at level 1−α | `(B, given exchangeability, marginal coverage 1−α)` | The exchangeability assumption | Conditional coverage; behavior under shift |
 
-A reader who runs a new claim through this table and cannot fill all four cells has found a
-non-conformant claim — which is the scorecard working, not failing.
+A reader who runs a new claim through this table and cannot fill the cells has found a
+non-conformant claim — which is the scorecard working, not failing. The Structured Outputs and
+constrained-decoder rows show why the class column must admit *two* entries: a property can be Class
+A intrinsically yet Class B over the inputs it actually meets (R6).
 
 ---
 
@@ -196,9 +217,14 @@ non-conformant claim — which is the scorecard working, not failing.
   (labeling / autoformalisation / source-trust), and the "claims, not code" finding are all from
   UNTRUST (§12, and the analysis preceding this draft). This document's contribution is the
   *contract form* (Part B), not the classification.
-- **Author's framing.** The four-field claim schema (B1), the five conformance rules (B2), and the
-  conditional-pair scorecard (B4) are organizing proposals — defensible, unratified, and the right
-  first thing to interrogate.
+- **Author's framing.** The four-field claim schema (B1), the six conformance rules (B2), and the
+  conditional-and-coverage *triple* scorecard (B4) are organizing proposals — defensible, unratified,
+  and the right first thing to interrogate.
+- **Stress-tested once.** R6, the coverage field, and the seam-stack allowance (B1) were added after
+  running OpenAI Structured Outputs through B5 surfaced a class that varies by input-slice — a gap
+  the v0.1.0 single-class schema could not express. (The Structured Outputs limitations are recalled
+  from OpenAI's documentation, not re-verified this pass.) One stress test is not many; treat the
+  schema as still under test.
 - **The bottom line.** The separation survives implementation iff every claim carries its class tag
   as a load-bearing, visible field, and every mechanism is pointed only at the property it actually
   enforces. Part B is one attempt to make that "iff" operational.

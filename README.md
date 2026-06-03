@@ -11,7 +11,7 @@ UNTRUST is not a research program, not a proposal, not a publishable artifact. I
 ## Contents
 
 - `UNTRUST.md` — the document itself (_LLM Trust by Enforceability_). Current version 2.0.1.
-- `ENFORCEABILITY-DISCIPLINE.md` — companion conformance contract. Turns the §12 enforceability cut into a labeling discipline for trust *claims*: a paper-shaped argument (the separation is a property of claims, not code) plus a normative four-field contract that keeps Class A/B/C distinct under implementation pressure. Working draft, v0.1.0.
+- `ENFORCEABILITY-DISCIPLINE.md` — companion conformance contract. Turns the §12 enforceability cut into a labeling discipline for trust *claims*: a paper-shaped argument (the separation is a property of claims, not code) plus a normative four-field contract that keeps Class A/B/C distinct under implementation pressure. Working draft, v0.2.0.
 - `CHANGELOG.md` — version history.
 - `README.md` — this file.
 
