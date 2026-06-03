@@ -2,7 +2,7 @@
 
 **A labeling discipline for AI trust claims — a lens, not an enforcer.**
 **Companion to *LLM Trust by Enforceability* (UNTRUST). Working draft.**
-**Version: 0.5.0** (2026-06-04)
+**Version: 0.5.1** (2026-06-04)
 
 > This document externalizes one part of UNTRUST — the §12 enforceability cut — as a *lens* any
 > trust *claim* (a paper, a product, an eval, a filing) can be read through, so departures from the
@@ -288,16 +288,20 @@ product still hides its worst behaviour — until R8 asks "what emerges from the
 - **Author's framing.** The four-field claim schema (B1), the eight conformance rules (B2), the
   conditional-and-coverage *triple* scorecard (B4), and the A/B-avg/B-wc/C split (A2) are organizing
   proposals — defensible, unratified, and the right first thing to interrogate.
-- **Stress-tested three times; the breaks cluster on one axis.** (1) OpenAI Structured Outputs
-  surfaced a class that varies by input-slice → R6, the coverage field, seam stacks (v0.2.0). (2)
-  Differential privacy surfaced that Class B was conformal-only, mis-seaming every worst-case bound →
-  the B-avg/B-wc split, the policy seam, R7 (v0.3.0). (3) CompCert passed the single-property schema
-  *clean* (first structural non-break), and an agentic coding assistant broke it on composition → the
-  R3 weakest-link wording and R8 emergent properties (v0.5.0). (Tool properties recalled from their
-  literature — OpenAI docs; Dwork et al. 2006, Mironov 2012; Leroy's CompCert and the Csmith/EMI
-  fuzzing results — not re-verified this pass.) The pattern that matters: the **single-property axis
-  looks converged** (Structured Outputs, then CompCert clean), while every remaining break is on the
-  **composition axis** (R3, R8). The work is concentrated, not scattered — but unfinished.
+- **Stress-tested five times; both axes now show break-then-clean.** *Single-property:* Structured
+  Outputs broke it (→ R6, the coverage field, seam stacks, v0.2.0); differential privacy broke it (→
+  the B-avg/B-wc split, the policy seam, R7, v0.3.0); CompCert passed *clean* (first structural
+  non-break). *Composition:* an agentic coding assistant broke it (→ the R3 weakest-link reword and
+  R8 emergent properties, v0.5.0); then federated learning with DP + secure aggregation passed
+  *clean* (R7∘R8 priced the composed ε; the threat model sat in the condition slot); then a
+  multi-agent LLM system passed *clean* structurally (its open-ended emergent-failure set folds into
+  the open-world Class C residual). (Tool properties recalled from their literature — OpenAI docs;
+  Dwork et al. 2006, Mironov 2012; Leroy's CompCert + the Csmith/EMI fuzzing results; Bonawitz et al.
+  2017 secure aggregation — not re-verified this pass.) The pattern: **single-property converged (1
+  break, 1 clean); composition now 1 break, 2 clean** — firming up, not yet a several-in-a-row
+  streak. Two thin spots named rather than buried: R7 and R8 compose only *implicitly* (federated
+  DP), and R8 does not say what to do with an *open* emergent set (multi-agent — the open-world
+  Class C residual covers the substance, but R8's text does not yet say so).
 - **The bottom line.** The separation survives implementation iff every claim carries its class tag
   as a load-bearing, visible field, and every mechanism is pointed only at the property it actually
   enforces. Part B is one attempt to make that "iff" operational.
