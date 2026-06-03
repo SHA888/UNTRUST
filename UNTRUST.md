@@ -2,7 +2,7 @@
 
 **Codename: UNTRUST**
 **Substrate fixes vs. non-substrate fixes, sorted by what can actually be enforced. Working draft.**
-**Version: 2.1.0** (2026-06-04)
+**Version: 2.2.0** (2026-06-04)
 
 > The codename names the load-bearing commitment: the neural component is treated as structurally untrusted by design. UNTRUST is a working identifier, not a brand — the document is publicly visible as a working draft, but the name is not intended for product, marketing, or external naming use.
 
@@ -359,6 +359,8 @@ The substrate fix addresses influence-on-the-model. It does not address everythi
 This is not a roadmap; it is a starting point. Read once for the shape; re-read each sketch looking for what breaks; test whether the trusted-base synthesis (§10) actually holds; treat the cross-disciplinary inputs (§11) as homework and the open questions (§15) as the real, years-long agenda.
 
 It is deliberately not a pitch. It does not argue anyone should do this — it argues that *if* someone does substrate-level work, this is roughly what it looks like and what its honest limits are. The substrate problem stays unsolved because the field's incentive gradient does not point at it; whether the work is worth doing is a question the person doing it must answer repeatedly, over years.
+
+One use to refuse: do not mistake this frame for something that can *enforce* itself. The classes are a lens — they classify, clarify, and discriminate, and that is all they bind. Reify the lens into a voluntary discipline — a conformance standard, a labeling contract, a checklist — and the discipline inherits no enforcement from the classification it rests on: any actor can decline it, so by the §2 criterion it is defeasible within the distribution, which makes it **Class C — a mitigation, not a fix**. This is the §9 lesson turned on the frame itself: enforcement requires a trusted base outside the thing being governed, and a document is not one. A standard built on UNTRUST is useful exactly as far as something external — adoption, contract, audit, law — chooses to enforce it, and not one step further. Applying these classes is sound; claiming that the act of applying them is itself a fix is the drift §0 warns against. (The `ENFORCEABILITY-DISCIPLINE.md` companion is one such reification, and labels itself Class C accordingly.)
 
 Either way: the substrate problem is real, the mitigations are not solutions, and the path worth finding is the one that compounds.
 
