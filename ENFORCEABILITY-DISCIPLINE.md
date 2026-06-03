@@ -2,7 +2,7 @@
 
 **A labeling discipline for AI trust claims — a lens, not an enforcer.**
 **Companion to *LLM Trust by Enforceability* (UNTRUST). Working draft.**
-**Version: 0.5.1** (2026-06-04)
+**Version: 0.6.0** (2026-06-04)
 
 > This document externalizes one part of UNTRUST — the §12 enforceability cut — as a *lens* any
 > trust *claim* (a paper, a product, an eval, a filing) can be read through, so departures from the
@@ -174,16 +174,23 @@ mode, not lying.
   level of an interval — that parameter is stated wherever the guarantee is stated. "Provable
   `(ε,δ)`-DP" without ε is non-conformant: the word "provable" is doing the work a meaningless ε
   would undo. This is R4 for Class B — the parameter is the **policy seam**, and a valid-but-vacuous
-  parameter is the B-class analog of the marketing gradient.
+  parameter is the B-class analog of the marketing gradient. When the parameterized guarantee is
+  itself *emergent* (R8) — composed across components or rounds — the disclosed parameter is the
+  **composed** one (ε's add under sequential DP composition; ~√k·ε under advanced composition), never
+  a single component's. A per-round ε is conformant for the per-round property and *non*-conformant
+  as the system's.
 - **R8 — A composite enumerates its emergent properties.** Properties that exist at the system level
   and belong to no component — cross-component information flow above all — are stated and classed
   *separately*, not assumed to be the union of the component properties. R1 decomposes a bundle into
   the properties someone *stated*; R8 forces the ones composition *creates*. Without it a system can
   be fully conformant — every component honestly labelled, no composite class advertised — while
   silently omitting its most important property (typically a Class C trust boundary). This blocks the
-  *omission* face of the aggregation halo, the one R3 leaves open. Note the limit: like all of Part B,
-  R8 makes the omission *legible* once someone asks "what emerges here?"; it cannot discover the
-  emergent property for you (see back matter).
+  *omission* face of the aggregation halo, the one R3 leaves open. When the emergent set is **open** —
+  not finitely enumerable, as agent–agent interaction is — the open-endedness is itself a Class C
+  property and must be declared (the open-world Class C residual, UNTRUST §12); enumerating a handful
+  of emergent properties and implying the list is complete is the omission face returning under cover
+  of diligence. Note the limit: like all of Part B, R8 makes the omission *legible* once someone asks
+  "what emerges here?"; it cannot discover the emergent property for you (see back matter).
 
 ## B3. Failure modes → blocking clauses
 
@@ -299,9 +306,10 @@ product still hides its worst behaviour — until R8 asks "what emerges from the
   Dwork et al. 2006, Mironov 2012; Leroy's CompCert + the Csmith/EMI fuzzing results; Bonawitz et al.
   2017 secure aggregation — not re-verified this pass.) The pattern: **single-property converged (1
   break, 1 clean); composition now 1 break, 2 clean** — firming up, not yet a several-in-a-row
-  streak. Two thin spots named rather than buried: R7 and R8 compose only *implicitly* (federated
-  DP), and R8 does not say what to do with an *open* emergent set (multi-agent — the open-world
-  Class C residual covers the substance, but R8's text does not yet say so).
+  streak. The two thin spots the passes exposed are now closed (v0.6.0): R7 states that an *emergent*
+  guarantee's parameter is the **composed** one (not a component's), and R8 declares an **open**
+  emergent set a Class C residual. These were wording closures, not new rules — the eight rules, four
+  fields, and three classes are unchanged.
 - **The bottom line.** The separation survives implementation iff every claim carries its class tag
   as a load-bearing, visible field, and every mechanism is pointed only at the property it actually
   enforces. Part B is one attempt to make that "iff" operational.

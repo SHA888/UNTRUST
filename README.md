@@ -11,7 +11,7 @@ UNTRUST is not a research program, not a proposal, not a publishable artifact. I
 ## Contents
 
 - `UNTRUST.md` — the document itself (_LLM Trust by Enforceability_). Current version 2.2.0.
-- `ENFORCEABILITY-DISCIPLINE.md` — companion labeling discipline (a lens, not an enforcer). Turns the §12 enforceability cut into a per-claim check for trust *claims*: a paper-shaped argument (the separation is a property of claims, not code) plus a four-field labeling schema that keeps Class A/B/C distinct under implementation pressure. Binds nothing — unadopted, it is itself Class C by UNTRUST's §2 criterion (see UNTRUST §16). Working draft, v0.5.1.
+- `ENFORCEABILITY-DISCIPLINE.md` — companion labeling discipline (a lens, not an enforcer). Turns the §12 enforceability cut into a per-claim check for trust *claims*: a paper-shaped argument (the separation is a property of claims, not code) plus a four-field labeling schema that keeps Class A/B/C distinct under implementation pressure. Binds nothing — unadopted, it is itself Class C by UNTRUST's §2 criterion (see UNTRUST §16). Working draft, v0.6.0.
 - `CHANGELOG.md` — version history.
 - `README.md` — this file.
 
