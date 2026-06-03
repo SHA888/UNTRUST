@@ -10,7 +10,7 @@ UNTRUST is not a research program, not a proposal, not a publishable artifact. I
 
 ## Contents
 
-- `UNTRUST.md` — the document itself (_LLM Trust by Enforceability_). Current version 2.2.0.
+- `UNTRUST.md` — the document itself (_LLM Trust by Enforceability_). Current version 2.2.1.
 - `ENFORCEABILITY-DISCIPLINE.md` — companion labeling discipline (a lens, not an enforcer). Turns the §12 enforceability cut into a per-claim check for trust *claims*: a paper-shaped argument (the separation is a property of claims, not code) plus a four-field labeling schema that keeps Class A/B/C distinct under implementation pressure. Binds nothing — unadopted, it is itself Class C by UNTRUST's §2 criterion (see UNTRUST §16). Working draft, v0.6.0.
 - `CHANGELOG.md` — version history.
 - `README.md` — this file.
@@ -60,7 +60,7 @@ Full version history is in `CHANGELOG.md`.
 
 ## Distribution
 
-Publicly visible as a working draft (v2.0.1+). The codename UNTRUST is a working identifier, not branding — it names the load-bearing commitment (the neural component is treated as structurally untrusted by design) and is not intended for product, marketing, or external naming use. If any of the sketches becomes the basis for actual implementation work, that work gets its own scope, license, and naming — separate from this document.
+Publicly visible as a working draft (v2.0.1+). The codename UNTRUST is a working identifier, not branding — it names the load-bearing commitment (the neural component is treated as structurally untrusted by design) and is not intended for product, marketing, or external naming use. If any of the sketches becomes the basis for actual implementation work, that work gets its own scope, license, and naming — separate from this document. The first such spin-out is **KEEP** ([github.com/SHA888/KEEP](https://github.com/SHA888/KEEP)) — a probe of Sketch 4 (capability tokens) under the §10 trusted-base synthesis, implementing the §15.6 demonstration. Separate repo, scope, and license, as the rule requires.
 
 ## License
 

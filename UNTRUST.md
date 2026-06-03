@@ -2,7 +2,7 @@
 
 **Codename: UNTRUST**
 **Substrate fixes vs. non-substrate fixes, sorted by what can actually be enforced. Working draft.**
-**Version: 2.2.0** (2026-06-04)
+**Version: 2.2.1** (2026-06-04)
 
 > The codename names the load-bearing commitment: the neural component is treated as structurally untrusted by design. UNTRUST is a working identifier, not a brand — the document is publicly visible as a working draft, but the name is not intended for product, marketing, or external naming use.
 
@@ -348,7 +348,7 @@ The substrate fix addresses influence-on-the-model. It does not address everythi
 3. **What is the minimal trusted base for an LLM agent?** seL4 is ~9.3K LOC [11]; what is the LLM-mediated equivalent?
 4. **What is the base↔model protocol**, and what are its security properties?
 5. **What does training look like for a model designed to live above a trusted base?** Pretraining does not include "you cannot reach the world directly."
-6. **What is the simplest end-to-end demonstration** — likely a narrow task where documented injection attacks are provably impossible against the proposed system?
+6. **What is the simplest end-to-end demonstration** — likely a narrow task where documented injection attacks are provably impossible against the proposed system? (An implementation probe of exactly this is under way — **KEEP**, [github.com/SHA888/KEEP](https://github.com/SHA888/KEEP) — a capability-token trusted base over a narrow AgentDojo scenario. Spin-out: separate repo, scope, and license.)
 7. **How does it compose with existing mitigations?** It should layer with RLHF, capability scoping, and human-in-the-loop, not replace them.
 8. **What is the upgrade path?** A change requiring a full rebuild will not be adopted; adding a trusted base alongside existing LLMs is more plausible.
 
