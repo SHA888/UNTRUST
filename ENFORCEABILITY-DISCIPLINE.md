@@ -2,7 +2,7 @@
 
 **A conformance contract for AI trust claims.**
 **Companion to *LLM Trust by Enforceability* (UNTRUST). Working draft.**
-**Version: 0.2.0** (2026-06-04)
+**Version: 0.3.0** (2026-06-04)
 
 > This document externalizes one part of UNTRUST — the §12 enforceability cut — and turns it
 > from a description into a discipline: a contract that any trust *claim* (a paper, a product, an
@@ -67,12 +67,18 @@ common way a Class A mechanism is oversold.
 | Class | What it enforces | Guarantee | Terminates in (the seam) |
 | ----- | ---------------- | --------- | ------------------------ |
 | **A. Structurally enforceable** | A property intrinsic to a closed formal system the architecture hosts | Unrepresentability — the violation is not a computation the system can perform | A semantic act that must be *trusted*: **labeling** (Sketch 1), **autoformalisation** (the checker's spec), or **source-trust** (groundedness) |
-| **B. Statistically guaranteeable** | A reference-dependent property admitting a distribution-level bound | Coverage, contingent on a distributional assumption (e.g. exchangeability) | The assumption itself — which deployment shift breaks and which nothing in the architecture enforces |
+| **B-avg. Statistically guaranteeable (average-case)** | A reference-dependent property admitting a *marginal* bound under an input-distribution assumption | Coverage, contingent on a distributional assumption (e.g. exchangeability) | The assumption itself — which deployment shift **breaks** and which nothing in the architecture enforces |
+| **B-wc. Statistically guaranteeable (worst-case)** | A property admitting a bound that holds over *all* inputs and adversary priors | A probabilistic bound on adversary advantage (e.g. `(ε,δ)`-DP), holding under shift | A **chosen parameter** (the ε-budget, composition accounting), the **policy seam** (is ε small enough to mean anything?), and **side channels** (implementation, timing) — *not* an input-distribution assumption |
 | **C. Mitigation-only** | A reference-dependent property with no closed formal core and no bound | None — probability and blast-radius reduction only | Everything; there is no internal structure corresponding to the property |
 
-The single most important fact about this table: **every Class A guarantee terminates in a seam it
-cannot itself close.** Architectural enforcement is never total. A faithful claim names its seam; an
-unfaithful one presents the enforced core as if it covered the seam too.
+Two facts about this table earn their keep. **(1)** Every Class A guarantee terminates in a seam it
+cannot itself close — architectural enforcement is never total; a faithful claim names its seam, an
+unfaithful one presents the enforced core as if it covered the seam too. **(2)** Class B is **not one
+class**: a worst-case bound (DP, crypto reductions) and an average-case bound (conformal, OOD
+coverage) share the letter B but have *different seams* — the average-case kind dies under
+distribution shift, the worst-case kind survives it and dies instead at a chosen parameter. Calling
+both "Class B, rests on a distributional assumption" mis-seams every worst-case guarantee, pointing
+the reader at the wrong failure.
 
 ## A3. How implementation erodes the separation
 
@@ -142,6 +148,12 @@ mode, not lying.
   distribution* where some inputs truncate — both classes are stated, each with its slice. A single
   bare class for a slice-varying property is non-conformant; it is the flattening B4 warns against,
   one level down.
+- **R7 — A parameterized guarantee discloses its parameter at guarantee-altitude.** If a bound has a
+  free parameter that sets its strength — ε in `(ε,δ)`-DP, α in conformal coverage, the confidence
+  level of an interval — that parameter is stated wherever the guarantee is stated. "Provable
+  `(ε,δ)`-DP" without ε is non-conformant: the word "provable" is doing the work a meaningless ε
+  would undo. This is R4 for Class B — the parameter is the **policy seam**, and a valid-but-vacuous
+  parameter is the B-class analog of the marketing gradient.
 
 ## B3. Failure modes → blocking clauses
 
@@ -166,11 +178,12 @@ So the scorecard is **conditional- and coverage-preserving by construction**: th
 
 ```
 class := (letter, condition, coverage)
-   e.g.  (A, "given correct labeling",              —)    // intrinsic wherever the condition holds
-         (A, "per completed call",                  —)
-         (B, "over the call distribution",   "Pr[completion] under the input mix")
-         (B, "given exchangeability / bounded shift", "marginal coverage 1−α")
-         (C, —,                                      —)    // C carries no condition; that is the point
+   e.g.  (A,     "given correct labeling",            —)    // intrinsic wherever the condition holds
+         (A,     "per completed call",                —)
+         (B-avg, "over the call distribution", "Pr[completion] under the input mix")
+         (B-avg, "given exchangeability",      "marginal coverage 1−α")   // dies under shift
+         (B-wc,  "ε-budget holds, no side channel", "worst-case over inputs")  // survives shift; ε is the seam (R7)
+         (C,     —,                                   —)    // C carries no condition; that is the point
 ```
 
 A scorecard cell that reads `A` is non-conformant. `A | given correct labeling | —` is conformant;
@@ -186,15 +199,19 @@ The contract earns its keep only if it discriminates. Applied to the tools UNTRU
 | ----- | ------------- | ---------- | --------- | ----------------- |
 | Capability-gated agent runtime | No tool call executes without an orchestrator-minted, scoped, unexpired capability | `(A, given the minting policy is correct, —)` | Capability-minting decision (coercion-through-language, UNTRUST §7) | Whether the *requested* action is wise; intent-alignment |
 | Groundedness enforcer | Every rendered factual span verbatim-copies a provenance-tagged source | `(A, given the source is vouched, —)` | Source-trust | **Truth** of the claim (Class C — must be stated, R4) |
-| Constrained decoder (syntactic) | Output conforms to grammar G | `(A, per completed call, —) · (B, over the call distribution, Pr[completion])` | G's adequacy (autoformalisation) **and** the decoder's correctness; truncation/refusal are the completion boundary | Semantic appropriateness, factuality |
-| OpenAI Structured Outputs (`strict` JSON schema) | Output, *when it completes*, parses and conforms to the schema | `(A, per completed call, —) · (B, over the call distribution, Pr[no truncation ∧ no refusal])` | Seam stack: schema fidelity (autoformalisation) + decoder correctness; truncation/refusal mark the completion boundary | Value-correctness; that the schema is the *right* schema; the vendor's word "guarantee" read as semantic |
+| Constrained decoder (syntactic) | Output conforms to grammar G | `(A, per completed call, —) · (B-avg, over the call distribution, Pr[completion])` | G's adequacy (autoformalisation) **and** the decoder's correctness; truncation/refusal are the completion boundary | Semantic appropriateness, factuality |
+| OpenAI Structured Outputs (`strict` JSON schema) | Output, *when it completes*, parses and conforms to the schema | `(A, per completed call, —) · (B-avg, over the call distribution, Pr[no truncation ∧ no refusal])` | Seam stack: schema fidelity (autoformalisation) + decoder correctness; truncation/refusal mark the completion boundary | Value-correctness; that the schema is the *right* schema; the vendor's word "guarantee" read as semantic |
 | Guardrail classifier | Flags policy-violating I/O | `(C, —, —)` | Everything (neural, attackable — UNTRUST §3, [30]) | Any worst-case guarantee |
-| Conformal predictor | Marginal coverage at level 1−α | `(B, given exchangeability, marginal coverage 1−α)` | The exchangeability assumption | Conditional coverage; behavior under shift |
+| Conformal predictor | Marginal coverage at level 1−α | `(B-avg, given exchangeability, marginal coverage 1−α)` | The exchangeability assumption — breaks under shift | Conditional coverage; behavior under shift |
+| Differential privacy (`(ε,δ)`-DP) | For adjacent datasets, output distributions differ by ≤ e^ε (+δ) | `(B-wc, ε-budget holds & no side channel, worst-case over inputs; survives shift)` | Chosen ε (**policy seam**, R7); composition accounting; privacy-unit definition (autoformalisation); side channels (floating-point, timing) | Whether ε is *small enough to matter*; statistic correctness; re-identification via outside auxiliary data |
 
 A reader who runs a new claim through this table and cannot fill the cells has found a
-non-conformant claim — which is the scorecard working, not failing. The Structured Outputs and
-constrained-decoder rows show why the class column must admit *two* entries: a property can be Class
-A intrinsically yet Class B over the inputs it actually meets (R6).
+non-conformant claim — which is the scorecard working, not failing. Two patterns the rows make
+visible: a property can be Class A intrinsically yet B-avg over the inputs it actually meets
+(Structured Outputs, R6); and **B-avg and B-wc fail at different seams** — conformal dies under
+shift, DP survives shift and dies instead at a chosen parameter (R7). A reader who labels DP's seam
+"exchangeability" has been mis-pointed by the old single-B vocabulary; that is the gap this version
+closes.
 
 ---
 
@@ -217,14 +234,16 @@ A intrinsically yet Class B over the inputs it actually meets (R6).
   (labeling / autoformalisation / source-trust), and the "claims, not code" finding are all from
   UNTRUST (§12, and the analysis preceding this draft). This document's contribution is the
   *contract form* (Part B), not the classification.
-- **Author's framing.** The four-field claim schema (B1), the six conformance rules (B2), and the
-  conditional-and-coverage *triple* scorecard (B4) are organizing proposals — defensible, unratified,
-  and the right first thing to interrogate.
-- **Stress-tested once.** R6, the coverage field, and the seam-stack allowance (B1) were added after
-  running OpenAI Structured Outputs through B5 surfaced a class that varies by input-slice — a gap
-  the v0.1.0 single-class schema could not express. (The Structured Outputs limitations are recalled
-  from OpenAI's documentation, not re-verified this pass.) One stress test is not many; treat the
-  schema as still under test.
+- **Author's framing.** The four-field claim schema (B1), the seven conformance rules (B2), the
+  conditional-and-coverage *triple* scorecard (B4), and the A/B-avg/B-wc/C split (A2) are organizing
+  proposals — defensible, unratified, and the right first thing to interrogate.
+- **Stress-tested twice, both times it broke.** (1) OpenAI Structured Outputs surfaced a class that
+  varies by input-slice → R6, the coverage field, seam stacks (v0.2.0). (2) Differential privacy
+  surfaced that Class B was described in purely conformal (average-case) terms, mis-seaming every
+  worst-case bound → the B-avg/B-wc split, the policy seam, and R7 (v0.3.0). (Both tools' properties
+  are recalled from their literature — OpenAI docs; Dwork et al. 2006, Mironov 2012 — not re-verified
+  this pass.) Two stress tests, two structural gaps; the schema is still under test, and the rate at
+  which it breaks is itself a caution.
 - **The bottom line.** The separation survives implementation iff every claim carries its class tag
   as a load-bearing, visible field, and every mechanism is pointed only at the property it actually
   enforces. Part B is one attempt to make that "iff" operational.
