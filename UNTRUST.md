@@ -2,7 +2,7 @@
 
 **Codename: UNTRUST**
 **Substrate fixes vs. non-substrate fixes, sorted by what can actually be enforced. Working draft.**
-**Version: 2.2.1** (2026-06-04)
+**Version: 2.2.2** (2026-06-29)
 
 > The codename names the load-bearing commitment: the neural component is treated as structurally untrusted by design. UNTRUST is a working identifier, not a brand — the document is publicly visible as a working draft, but the name is not intended for product, marketing, or external naming use.
 
@@ -316,7 +316,7 @@ Mapped onto the enforceability classes of §12: **substrate trust → Class A**;
 
 - **Hallucination / accuracy (Class C).** The model is simply wrong on a clean input. The fix space is statistical — retrieval grounding [33], verification loops, calibration, better data — and the success criterion is a lower error rate, never zero. There is no substrate fix, and not for lack of trying: hallucination is inevitable by statistical [17] and computability-theoretic [18] argument, and "is this true?" depends on a ground truth outside the computation. What UNTRUST-style thinking *does* buy is narrow: a sound symbolic checker (§12) enforces deductive *validity* over the formalisable fraction — a guarantee about a chain, not about a claim's truth.
 - **Alignment / honesty (Class C).** Value divergence with no adversary required. The fix space is preference- and feedback-based — RLHF [34], constitutional AI [35], interpretability — aiming at intent-match. There is no substrate fix, because intent is a relation to a latent principal state outside the computation; there is no internal structure that corresponds to "aligned." Worse, the model's own stated reasoning is an unreliable window [20][21], so honesty cannot be read off the output.
-- **Robustness / OOD (B-avg / B-wc / C).** Degradation outside the training distribution, and the one Part II cluster where *both* B-species appear. Coverage methods — conformal prediction [23] — give a real distribution-free guarantee *where the shift is known and bounded* (**B-avg**), but rest on exchangeability, which shift breaks. Per-input certificates — randomized smoothing [37] — instead bound an adversarial neighbourhood worst-case and survive shift (**B-wc**), at the cost of a chosen sampling budget and coverage only out to the certified radius. In the open world the complement of the training distribution is unbounded, no guarantee is available, and only mitigations remain (Class C). The honest target *beyond the certified radius* is graceful degradation, not a global worst-case bound.
+- **Robustness / OOD (B-avg / B-wc / Class C).** Degradation outside the training distribution, and the one Part II cluster where *both* B-species appear. Coverage methods — conformal prediction [23] — give a real distribution-free guarantee *where the shift is known and bounded* (**B-avg**), but rest on exchangeability, which shift breaks. Per-input certificates — randomized smoothing [37] — instead bound an adversarial neighbourhood worst-case and survive shift (**B-wc**), at the cost of a chosen sampling budget and coverage only out to the certified radius. In the open world the complement of the training distribution is unbounded, no guarantee is available, and only mitigations remain (Class C). The honest target *beyond the certified radius* is graceful degradation, not a global worst-case bound.
 
 What stays true across the expansion: the §2 criterion still discriminates (now as a cross-cluster test); no Class C cluster receives a substrate fix; and the lanes stay separate. A reader must not leave this part thinking hallucination or intent-alignment is architecturally enforceable — the mapping above says the opposite.
 
@@ -404,7 +404,7 @@ Either way: the substrate problem is real, the mitigations are not solutions, an
 **[34] InstructGPT / RLHF.** Ouyang, L., et al. (2022). arXiv:2203.02155. (Foundational: Christiano et al. 2017, arXiv:1706.03741.) Canonical alignment fix-space entry; training-time mitigation.
 **[35] Constitutional AI.** Bai, Y., et al. (2022). arXiv:2212.08073 (Anthropic). RLAIF against a written constitution; distinct from Constitutional *Classifiers* [28][29]; mitigation class.
 **[36] Differential Privacy.** Dwork, C., McSherry, F., Nissim, K., & Smith, A. (2006). TCC 2006. Calibrating noise to sensitivity; a worst-case bound over adjacent datasets (B-wc). *Implementation seam*: floating-point breaks the guarantee (Mironov, CCS 2012).
-**[37] Certified Adversarial Robustness via Randomized Smoothing.** Cohen, J., Rosenfeld, E., & Kolter, J. Z. (2019). ICML 2019. Per-input certified radius via a high-probability bound — a B-wc robustness certificate.
+**[37] Certified Adversarial Robustness via Randomized Smoothing.** Cohen, J., Rosenfeld, E., & Kolter, J. Z. (2019). ICML 2019. arXiv:1902.02918. Per-input certified radius via a high-probability bound — a B-wc robustness certificate.
 
 *Foundational work on orthogonal/unitary parameterisations (Pattern 5):* Lezcano-Casado & Martínez-Rubio (ICML 2019); Arjovsky et al. (ICML 2016); Wisdom et al. (NeurIPS 2016).
 
