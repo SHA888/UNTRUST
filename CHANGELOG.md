@@ -2,7 +2,7 @@
 
 Version history for `UNTRUST.md` (_LLM Trust by Enforceability_). This file is the version ledger that previously lived in the document header; it was split out at v1.0.1. Entries are newest-first, and the prose of each pre-v1.0.1 entry is preserved verbatim from the header.
 
-The document follows strict additive / verbatim-preservation rules — see `CLAUDE.md`.
+Through v1.x the document followed strict additive / verbatim-preservation rules; **v2.0.0 dropped that discipline** — it is now a living note edited freely for clarity, with history kept here rather than inline. See `CLAUDE.md` for the current editing discipline.
 
 > _Note: entries reference section numbers as they stood when each entry was written. Pre-v1.0.0 entries use the original numbering; the v1.0.0 refactor renumbered every section — see the old→new map in Appendix B.2.7 of `UNTRUST.md`._
 
